@@ -154,7 +154,7 @@ class CameraFragment : Fragment() {
         // Capture request holds references to target surfaces
         session.device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
             // Add the preview surface target
-            addTarget(viewFinder.holder.surface)
+            addTarget(viewFinder.producerSurface)
         }.build()
     }
 
@@ -163,7 +163,7 @@ class CameraFragment : Fragment() {
         // Capture request holds references to target surfaces
         session.device.createCaptureRequest(CameraDevice.TEMPLATE_RECORD).apply {
             // Add the preview and recording surface targets
-            addTarget(viewFinder.holder.surface)
+            addTarget(viewFinder.producerSurface)
             addTarget(recorderSurface)
             // Sets user requested FPS for all targets
             set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, Range(args.fps, args.fps))
@@ -187,7 +187,7 @@ class CameraFragment : Fragment() {
         overlay = view.findViewById(R.id.overlay)
         viewFinder = view.findViewById(R.id.view_finder)
 
-        viewFinder.holder.addCallback(object : SurfaceHolder.Callback {
+        viewFinder.surfaceCallback = object : SurfaceHolder.Callback {
             override fun surfaceDestroyed(holder: SurfaceHolder) = Unit
             override fun surfaceChanged(
                     holder: SurfaceHolder,
@@ -207,12 +207,12 @@ class CameraFragment : Fragment() {
                 // To ensure that size is set, initialize camera in the view's thread
                 viewFinder.post { initializeCamera() }
             }
-        })
+        }
 
         // Used to rotate the output media to match device orientation
         relativeOrientation = OrientationLiveData(requireContext(), characteristics).apply {
-            observe(viewLifecycleOwner, Observer {
-                orientation -> Log.d(TAG, "Orientation changed: $orientation")
+            observe(viewLifecycleOwner, Observer { orientation ->
+                Log.d(TAG, "Orientation changed: $orientation")
             })
         }
     }
@@ -244,7 +244,7 @@ class CameraFragment : Fragment() {
         camera = openCamera(cameraManager, args.cameraId, cameraHandler)
 
         // Creates list of Surfaces where the camera will output frames
-        val targets = listOf(viewFinder.holder.surface, recorderSurface)
+        val targets = listOf(viewFinder.producerSurface, recorderSurface)
 
         // Start a capture session using our open camera and list of Surfaces where frames will go
         session = createCaptureSession(camera, targets, cameraHandler)
@@ -340,7 +340,7 @@ class CameraFragment : Fragment() {
             }
 
             override fun onError(device: CameraDevice, error: Int) {
-                val msg = when(error) {
+                val msg = when (error) {
                     ERROR_CAMERA_DEVICE -> "Fatal (device)"
                     ERROR_CAMERA_DISABLED -> "Device policy"
                     ERROR_CAMERA_IN_USE -> "Camera in use"
@@ -367,7 +367,7 @@ class CameraFragment : Fragment() {
 
         // Creates a capture session using the predefined targets, and defines a session state
         // callback which resumes the coroutine once the session is configured
-        device.createCaptureSession(targets, object: CameraCaptureSession.StateCallback() {
+        device.createCaptureSession(targets, object : CameraCaptureSession.StateCallback() {
 
             override fun onConfigured(session: CameraCaptureSession) = cont.resume(session)
 

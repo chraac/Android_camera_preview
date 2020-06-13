@@ -19,6 +19,8 @@ package com.example.android.camera.utils
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
+import android.view.Surface
+import android.view.SurfaceHolder
 import android.view.SurfaceView
 import kotlin.math.roundToInt
 
@@ -30,9 +32,37 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         context: Context,
         attrs: AttributeSet? = null,
         defStyle: Int = 0
-) : SurfaceView(context, attrs, defStyle) {
+) : SurfaceView(context, attrs, defStyle), BufferQueueProducer {
+
+    override val producerSurface: Surface = holder.surface
+    override var surfaceCallback: SurfaceHolder.Callback?
+        get() = outerSurfaceCallback
+        set(value) {
+            if (outerSurfaceCallback == null) {
+                holder.addCallback(innerSurfaceCallback)
+            }
+
+            outerSurfaceCallback = value
+        }
 
     private var aspectRatio = 0f
+
+    private var outerSurfaceCallback: SurfaceHolder.Callback? = null
+
+    private val innerSurfaceCallback = object : SurfaceHolder.Callback {
+
+        override fun surfaceCreated(holder: SurfaceHolder?) {
+            outerSurfaceCallback?.surfaceCreated(holder)
+        }
+
+        override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
+            outerSurfaceCallback?.surfaceChanged(holder, format, width, height)
+        }
+
+        override fun surfaceDestroyed(holder: SurfaceHolder?) {
+            outerSurfaceCallback?.surfaceDestroyed(holder)
+        }
+    }
 
     /**
      * Sets the aspect ratio for this view. The size of the view will be
