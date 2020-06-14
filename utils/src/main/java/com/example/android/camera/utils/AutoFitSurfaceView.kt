@@ -34,7 +34,9 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         defStyle: Int = 0
 ) : SurfaceView(context, attrs, defStyle), BufferQueueProducer {
 
-    override val producerSurface: Surface = holder.surface
+    override val producerSurface: Surface
+        get() = holder.surface
+
     override var surfaceCallback: SurfaceHolder.Callback?
         get() = outerSurfaceCallback
         set(value) {
@@ -49,18 +51,29 @@ class AutoFitSurfaceView @JvmOverloads constructor(
 
     private var outerSurfaceCallback: SurfaceHolder.Callback? = null
 
+    private var glThread: GLHandlerThread? = null
+
     private val innerSurfaceCallback = object : SurfaceHolder.Callback {
 
         override fun surfaceCreated(holder: SurfaceHolder?) {
+            if (glThread == null) {
+                val thread = GLHandlerThread("GLCameraFrameThread", producerSurface)
+                thread.looper
+                glThread = thread
+            }
+
             outerSurfaceCallback?.surfaceCreated(holder)
         }
 
         override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
+            glThread?.notifySurfaceSizeChange(width, height)
             outerSurfaceCallback?.surfaceChanged(holder, format, width, height)
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
             outerSurfaceCallback?.surfaceDestroyed(holder)
+            glThread?.destroyResourcesAndQuit()
+            glThread = null
         }
     }
 
