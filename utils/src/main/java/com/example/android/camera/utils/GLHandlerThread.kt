@@ -4,7 +4,6 @@ import android.opengl.*
 import android.os.Handler
 import android.os.HandlerThread
 import android.view.Surface
-import androidx.annotation.AnyThread
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
 import javax.microedition.khronos.egl.EGL10
@@ -21,15 +20,7 @@ var CONTEXT_ATTR = intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL10.EGL_NON
 
 class GLHandlerThread @MainThread constructor(name: String, surface: Surface) : HandlerThread(name) {
 
-    val eglSurface: EGLSurface
-        @AnyThread
-        get() = _eglSurface
-
-    val eglContext: EGLContext
-        @AnyThread
-        get() = _eglContext
-
-    val handler: Handler by lazy {
+    private val handler: Handler by lazy {
         Handler(looper)
     }
 
@@ -119,6 +110,7 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface) : 
     }
 
     private fun recreateSurface(width: Int, height: Int) {
+        @Suppress("MemberVisibilityCanBePrivate")
         if (_eglDisplay == EGL14.EGL_NO_DISPLAY ||
                 _eglContext == EGL14.EGL_NO_CONTEXT || _eglConfig == null) {
             return
