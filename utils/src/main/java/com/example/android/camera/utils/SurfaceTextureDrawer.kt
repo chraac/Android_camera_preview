@@ -5,5 +5,5 @@ import android.util.Size
 
 interface SurfaceTextureDrawer {
     var viewPortSize: Size
-    fun draw(surfaceTexture: SurfaceTexture)
+    fun draw(surfaceTexture: SurfaceTextureExt)
 }

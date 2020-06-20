@@ -18,7 +18,8 @@ val CONFIG_RGB = intArrayOf(
 
 var CONTEXT_ATTR = intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL10.EGL_NONE)
 
-class GLHandlerThread @MainThread constructor(name: String, surface: Surface) : HandlerThread(name) {
+class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
+    : HandlerThread(name), AutoCloseable {
 
     private val handler: Handler by lazy {
         Handler(looper)
@@ -86,7 +87,7 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface) : 
     }
 
     @MainThread
-    fun destroyResourcesAndQuit() {
+    override fun close() {
         handler.post {
             if (_eglDisplay != EGL14.EGL_NO_DISPLAY) {
                 EGL14.eglMakeCurrent(_eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT);

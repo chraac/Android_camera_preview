@@ -17,6 +17,7 @@
 package com.example.android.camera.utils
 
 import android.content.Context
+import android.graphics.SurfaceTexture
 import android.util.AttributeSet
 import android.util.Log
 import android.view.Surface
@@ -35,7 +36,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
 ) : SurfaceView(context, attrs, defStyle), BufferQueueProducer {
 
     override val producerSurface: Surface
-        get() = holder.surface
+        get() = surface
 
     override var surfaceCallback: SurfaceHolder.Callback?
         get() = outerSurfaceCallback
@@ -47,9 +48,19 @@ class AutoFitSurfaceView @JvmOverloads constructor(
             outerSurfaceCallback = value
         }
 
+
     private var aspectRatio = 0f
 
     private var outerSurfaceCallback: SurfaceHolder.Callback? = null
+
+    private val surfaceTextureWrapper: SurfaceTextureExt = SurfaceTextureWrapper().apply {
+        surfaceTexture.setOnFrameAvailableListener {
+            ;
+        }
+    }
+
+    private val surface = Surface(surfaceTextureWrapper.surfaceTexture)
+
 
     private var glThread: GLHandlerThread? = null
 
@@ -72,7 +83,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
 
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
             outerSurfaceCallback?.surfaceDestroyed(holder)
-            glThread?.destroyResourcesAndQuit()
+            glThread?.close()
             glThread = null
         }
     }
