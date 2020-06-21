@@ -4,6 +4,7 @@ import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20.*
 import android.opengl.Matrix
 import android.util.Size
+import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
 import java.lang.RuntimeException
 import java.nio.FloatBuffer
@@ -12,9 +13,14 @@ import java.nio.FloatBuffer
 private const val MATRIX_SIZE = 16
 private const val FLOAT_SIZE = java.lang.Float.SIZE / java.lang.Byte.SIZE
 
-private const val VERTICES_STRIDE = 4 * FLOAT_SIZE
+private const val INDEX_VERTEX_X = 0
+private const val INDEX_VERTEX_Y = 1
+private const val INDEX_TEXTURE_U = 2
+private const val INDEX_TEXTURE_V = 3
 private const val VERTEX_COMPONENT_COUNT = 2
 private const val TEX_COORD_COMPONENT_COUNT = 2
+private const val ATTRIBUTE_FLOAT_COUNT = VERTEX_COMPONENT_COUNT + TEX_COORD_COMPONENT_COUNT
+private const val ATTRIBUTE_STRIDE = ATTRIBUTE_FLOAT_COUNT * FLOAT_SIZE
 
 private const val VERTEX_SHADER = """
 precision highp float;
@@ -102,12 +108,12 @@ private class Program(
         val program = glCreateProgram()
         checkGLError()
 
-        val vertex = loadShader(GL_VERTEX_SHADER, VERTEX_SHADER)
+        val vertex = loadShader(GL_VERTEX_SHADER, vertexShader)
         glAttachShader(program, vertex)
         checkGLError()
         glDeleteShader(vertex)
 
-        val fragment = loadShader(GL_FRAGMENT_SHADER, FRAGMENT_SHADER_OES)
+        val fragment = loadShader(GL_FRAGMENT_SHADER, fragmentShader)
         glAttachShader(program, fragment)
         checkGLError()
         glDeleteShader(fragment)
@@ -148,7 +154,7 @@ private class Program(
     }
 }
 
-@WorkerThread
+@MainThread
 class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
 
     override var viewPortSize: Size = Size(0, 0)
@@ -177,11 +183,11 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
     // 4 x (sizeof(vec2) + sizeof(vec2))
     private val _verticesBuffer = FloatBuffer.allocate(16).apply {
         val floatArray = this.array()
-        floatArray[2] = 0.0f
-        floatArray[3] = 0.0f
+        floatArray[INDEX_TEXTURE_U] = 0.0f
+        floatArray[INDEX_TEXTURE_V] = 0.0f
 
-        floatArray[6] = 0.0f
-        floatArray[7] = 1.0f
+        floatArray[ATTRIBUTE_FLOAT_COUNT + INDEX_TEXTURE_U] = 0.0f
+        floatArray[ATTRIBUTE_FLOAT_COUNT + INDEX_TEXTURE_V] = 1.0f
 
         floatArray[10] = 1.0f
         floatArray[11] = 1.0f
@@ -195,17 +201,9 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
 
     @WorkerThread
     override fun draw(surfaceTexture: SurfaceTextureExt) {
-        val texId = surfaceTexture.bind(this)
-        if (texId == 0) {
-            throw RuntimeException("SurfaceTextureExt.bind.failed")
-        }
-
-        val program = prepareProgram(surfaceTexture.target)
-        prepareDrawParam(surfaceTexture.target, texId, program)
-
+        beginDraw(surfaceTexture)
         glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, 0);
-
-        surfaceTexture.unbind()
+        endDraw(surfaceTexture)
     }
 
     @WorkerThread
@@ -218,6 +216,23 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
             glBindBuffer(GL_ARRAY_BUFFER, 0)
             glDeleteBuffers(1, intArrayOf(_verticesBufferId), 0)
         }
+    }
+
+    @WorkerThread
+    private fun beginDraw(surfaceTexture: SurfaceTextureExt) {
+        val texId = surfaceTexture.bind(this)
+        if (texId == 0) {
+            throw RuntimeException("SurfaceTextureExt.bind.failed")
+        }
+
+        val program = prepareProgram(surfaceTexture.target)
+        getVertices(surfaceTexture, _verticesBuffer)
+        prepareDrawParam(surfaceTexture.target, texId, program)
+    }
+
+    @WorkerThread
+    private fun endDraw(surfaceTexture: SurfaceTextureExt) {
+        surfaceTexture.unbind()
     }
 
     @WorkerThread
@@ -247,6 +262,7 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
         return program
     }
 
+    @WorkerThread
     private fun prepareDrawParam(target: Int, texId: Int, program: Program) {
         if (_projectionMatrixChanged) {
             glUniformMatrix4fv(program.uniformProjection, 1, false,
@@ -281,7 +297,7 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
                 VERTEX_COMPONENT_COUNT,
                 GL_FLOAT,
                 false,
-                VERTICES_STRIDE,
+                ATTRIBUTE_STRIDE,
                 0)
 
         glEnableVertexAttribArray(program.attributeTexCoord)
@@ -289,7 +305,39 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
                 TEX_COORD_COMPONENT_COUNT,
                 GL_FLOAT,
                 false,
-                VERTICES_STRIDE,
+                ATTRIBUTE_STRIDE,
                 VERTEX_COMPONENT_COUNT * FLOAT_SIZE)
+    }
+
+    companion object {
+
+        fun getVertices(surfaceTexture: SurfaceTextureExt, verticesBuffer: FloatBuffer) {
+            val floatArray = verticesBuffer.array()
+            val texSize = surfaceTexture.size
+            var vertexOffset = 0
+            floatArray[vertexOffset + INDEX_VERTEX_X] = 0.0f
+            floatArray[vertexOffset + INDEX_VERTEX_Y] = 0.0f
+            floatArray[vertexOffset + INDEX_TEXTURE_U] = 0.0f
+            floatArray[vertexOffset + INDEX_TEXTURE_V] = 0.0f
+
+            vertexOffset += ATTRIBUTE_FLOAT_COUNT
+            floatArray[vertexOffset + INDEX_VERTEX_X] = texSize.width.toFloat()
+            floatArray[vertexOffset + INDEX_VERTEX_Y] = 0.0f
+            floatArray[vertexOffset + INDEX_TEXTURE_U] = 1.0f
+            floatArray[vertexOffset + INDEX_TEXTURE_V] = 0.0f
+
+            vertexOffset += ATTRIBUTE_FLOAT_COUNT
+            floatArray[vertexOffset + INDEX_VERTEX_X] = texSize.width.toFloat()
+            floatArray[vertexOffset + INDEX_VERTEX_Y] = texSize.height.toFloat()
+            floatArray[vertexOffset + INDEX_TEXTURE_U] = 1.0f
+            floatArray[vertexOffset + INDEX_TEXTURE_V] = 1.0f
+
+            vertexOffset += ATTRIBUTE_FLOAT_COUNT
+            floatArray[vertexOffset + INDEX_VERTEX_X] = 0.0f
+            floatArray[vertexOffset + INDEX_VERTEX_Y] = texSize.height.toFloat()
+            floatArray[vertexOffset + INDEX_TEXTURE_U] = 0.0f
+            floatArray[vertexOffset + INDEX_TEXTURE_V] = 1.0f
+        }
+
     }
 }

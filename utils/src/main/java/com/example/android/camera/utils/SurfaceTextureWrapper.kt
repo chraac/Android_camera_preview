@@ -2,7 +2,9 @@ package com.example.android.camera.utils
 
 import android.graphics.SurfaceTexture
 import android.opengl.GLES11Ext
+import android.opengl.GLES20.*
 import android.util.Size
+import androidx.annotation.WorkerThread
 
 class SurfaceTextureWrapper : SurfaceTextureExt {
 
@@ -18,21 +20,37 @@ class SurfaceTextureWrapper : SurfaceTextureExt {
             _size = value
         }
 
-    override var textureId: Int
-        get() = _textureId
-        set(value) {
-            _surfaceTexture.attachToGLContext(_textureId)
-            _textureId = value
-        }
+    override val textureId: Int
+        get() = _textureId[0]
 
     private val _surfaceTexture = SurfaceTexture(0)
     private var _size = Size(0, 0)
-    private var _textureId: Int = 0
+    private var _textureId = IntArray(1)
 
-    override fun bind(drawer: SurfaceTextureDrawer): Int {
-        return _textureId
+    @WorkerThread
+    override fun createGLTexture() {
+        glGenTextures(_textureId.size, _textureId, 0)
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D, _textureId[0])
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        _surfaceTexture.attachToGLContext(_textureId[0])
     }
 
+    @WorkerThread
+    override fun bind(drawer: SurfaceTextureDrawer): Int {
+        return _textureId[0]
+    }
+
+    @WorkerThread
     override fun unbind() {
+    }
+
+    @WorkerThread
+    override fun deleteGLTexture() {
+        _surfaceTexture.detachFromGLContext()
+        glDeleteTextures(_textureId.size, _textureId, 0)
     }
 }

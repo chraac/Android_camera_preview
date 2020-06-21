@@ -3,6 +3,7 @@ package com.example.android.camera.utils
 import android.opengl.*
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Size
 import android.view.Surface
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
@@ -21,9 +22,12 @@ var CONTEXT_ATTR = intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL10.EGL_NON
 class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
     : HandlerThread(name), AutoCloseable {
 
-    private val handler: Handler by lazy {
+    val handler: Handler by lazy {
         Handler(looper)
     }
+
+    val drawer: SurfaceTextureDrawer
+        get() = _drawer
 
     private var _eglDisplay: EGLDisplay = EGL14.EGL_NO_DISPLAY
     private var _eglSurface: EGLSurface = EGL14.EGL_NO_SURFACE
@@ -32,6 +36,7 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
     private val _windowsSurface: Surface = surface
     private var _surfaceWidth: Int = 0
     private var _surfaceHeight: Int = 0
+    private val _drawer: SurfaceTextureDrawer = GLSurfaceTextureDrawer()
 
     init {
         start()
@@ -146,5 +151,6 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
 
         _surfaceWidth = width
         _surfaceHeight = height
+        _drawer.viewPortSize = Size(width, height)
     }
 }

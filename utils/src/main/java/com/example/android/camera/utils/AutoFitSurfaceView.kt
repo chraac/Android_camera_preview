@@ -23,7 +23,14 @@ import android.util.Log
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import androidx.annotation.MainThread
+import androidx.annotation.WorkerThread
+import kotlinx.coroutines.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import kotlin.math.roundToInt
+
+private val TAG = AutoFitSurfaceView::class.java.simpleName
 
 /**
  * A [SurfaceView] that can be adjusted to a specified aspect ratio and
@@ -33,7 +40,9 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         context: Context,
         attrs: AttributeSet? = null,
         defStyle: Int = 0
-) : SurfaceView(context, attrs, defStyle), BufferQueueProducer {
+) : SurfaceView(context, attrs, defStyle),
+        BufferQueueProducer,
+        SurfaceTexture.OnFrameAvailableListener {
 
     override val producerSurface: Surface
         get() = surface
@@ -51,38 +60,54 @@ class AutoFitSurfaceView @JvmOverloads constructor(
 
     private var aspectRatio = 0f
 
+
     private var outerSurfaceCallback: SurfaceHolder.Callback? = null
 
-    private val surfaceTextureWrapper: SurfaceTextureExt = SurfaceTextureWrapper().apply {
-        surfaceTexture.setOnFrameAvailableListener {
-            ;
-        }
-    }
+    private val surfaceTextureWrapper: SurfaceTextureExt = SurfaceTextureWrapper()
 
     private val surface = Surface(surfaceTextureWrapper.surfaceTexture)
-
-
     private var glThread: GLHandlerThread? = null
+
+    private val mainScope = MainScope()
 
     private val innerSurfaceCallback = object : SurfaceHolder.Callback {
 
+        @MainThread
         override fun surfaceCreated(holder: SurfaceHolder?) {
-            if (glThread == null) {
-                val thread = GLHandlerThread("GLCameraFrameThread", producerSurface)
-                thread.looper
+            var thread = glThread
+            if (thread == null) {
+                thread = GLHandlerThread("GLCameraFrameThread", producerSurface)
+                surfaceTextureWrapper.surfaceTexture.setOnFrameAvailableListener(
+                        this@AutoFitSurfaceView, thread.handler)
                 glThread = thread
+
+                // TODO: blocking until createGLTexture return
+                mainScope.launch {
+                    suspendCoroutine { continuation ->
+                        thread.run {
+                            surfaceTextureWrapper.createGLTexture()
+                            continuation.resume()
+                        }
+                    }
+                }
             }
 
             outerSurfaceCallback?.surfaceCreated(holder)
         }
 
+        @MainThread
         override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
             glThread?.notifySurfaceSizeChange(width, height)
             outerSurfaceCallback?.surfaceChanged(holder, format, width, height)
         }
 
+        @MainThread
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
             outerSurfaceCallback?.surfaceDestroyed(holder)
+            glThread?.run {
+                surfaceTextureWrapper.deleteGLTexture()
+            }
+
             glThread?.close()
             glThread = null
         }
@@ -127,7 +152,10 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         }
     }
 
-    companion object {
-        private val TAG = AutoFitSurfaceView::class.java.simpleName
+    @WorkerThread
+    override fun onFrameAvailable(surfaceTexture: SurfaceTexture?) {
+        val thread = glThread ?: return
+        thread.drawer.draw(surfaceTextureWrapper)
+        thread.swapBuffer()
     }
 }

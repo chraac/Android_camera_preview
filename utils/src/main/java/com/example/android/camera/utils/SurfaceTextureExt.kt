@@ -10,8 +10,17 @@ interface SurfaceTextureExt {
     val target: Int
     val surfaceTexture: SurfaceTexture
     var size: Size
-    var textureId: Int
+    val textureId: Int
 
+    @WorkerThread
+    fun createGLTexture()
+
+    @WorkerThread
     fun bind(drawer: SurfaceTextureDrawer): Int
+
+    @WorkerThread
     fun unbind()
+
+    @WorkerThread
+    fun deleteGLTexture()
 }
