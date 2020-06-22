@@ -76,17 +76,17 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         override fun surfaceCreated(holder: SurfaceHolder?) {
             var thread = glThread
             if (thread == null) {
-                thread = GLHandlerThread("GLCameraFrameThread", producerSurface)
+                thread = GLHandlerThread("GLCameraFrameThread", getHolder().surface)
                 surfaceTextureWrapper.surfaceTexture.setOnFrameAvailableListener(
                         this@AutoFitSurfaceView, thread.handler)
                 glThread = thread
 
                 // TODO: blocking until createGLTexture return
                 mainScope.launch {
-                    suspendCoroutine { continuation ->
-                        thread.run {
+                    val ret: Int = suspendCoroutine { continuation ->
+                        thread.handler.post {
                             surfaceTextureWrapper.createGLTexture()
-                            continuation.resume()
+                            continuation.resume(0)
                         }
                     }
                 }
