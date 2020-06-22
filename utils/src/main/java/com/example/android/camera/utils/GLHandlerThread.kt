@@ -116,7 +116,6 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
     }
 
     private fun recreateSurface(width: Int, height: Int) {
-        @Suppress("MemberVisibilityCanBePrivate")
         if (_eglDisplay == EGL14.EGL_NO_DISPLAY ||
                 _eglContext == EGL14.EGL_NO_CONTEXT || _eglConfig == null) {
             return

@@ -20,6 +20,7 @@ import android.content.Context
 import android.graphics.SurfaceTexture
 import android.util.AttributeSet
 import android.util.Log
+import android.util.Size
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -124,6 +125,9 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         require(width > 0 && height > 0) { "Size cannot be negative" }
         aspectRatio = width.toFloat() / height.toFloat()
         holder.setFixedSize(width, height)
+        glThread?.handler?.post {
+            surfaceTextureWrapper.size = Size(width, height)
+        }
         requestLayout()
     }
 
