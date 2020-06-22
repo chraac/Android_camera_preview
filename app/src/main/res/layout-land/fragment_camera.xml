@@ -32,17 +32,4 @@
         android:layout_height="match_parent"
         android:foreground="@android:color/transparent" />
 
-    <ImageButton
-        android:id="@+id/capture_button"
-        android:layout_width="96dp"
-        android:layout_height="96dp"
-        android:layout_marginRight="96dp"
-        android:scaleType="fitCenter"
-        android:background="@drawable/ic_shutter"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        android:contentDescription="@string/capture"
-        tools:ignore="RtlHardcoded" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>
