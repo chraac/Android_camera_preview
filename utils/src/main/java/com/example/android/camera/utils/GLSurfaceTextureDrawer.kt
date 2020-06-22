@@ -206,7 +206,7 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
     @WorkerThread
     override fun draw(surfaceTexture: SurfaceTextureExt) {
         beginDraw(surfaceTexture)
-        glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, 0);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4)
         endDraw(surfaceTexture)
     }
 
@@ -236,6 +236,8 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
 
     @WorkerThread
     private fun endDraw(surfaceTexture: SurfaceTextureExt) {
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(surfaceTexture.target, 0)
         surfaceTexture.unbind()
     }
 
@@ -293,6 +295,7 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
             checkGLError()
         }
 
+        glBindBuffer(GL_ARRAY_BUFFER, _verticesBufferId)
         glBufferData(GL_ARRAY_BUFFER,
                 _verticesBuffer.capacity() * FLOAT_SIZE, _verticesBuffer, GL_STREAM_DRAW)
 
