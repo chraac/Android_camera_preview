@@ -39,7 +39,7 @@ void main()
     */
     mat4 mp = projection * transform;
     gl_Position = mp * vec4(position, 0.0, 1.0);
-    tex_coord_out = tex_coord;
+    tex_coord_frag = tex_coord;
 }
 """
 
@@ -196,7 +196,11 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
         floatArray[15] = 0.0f
     }
 
-    private val _programList = ArrayList<Program?>(2)
+    private val _programList = ArrayList<Program?>(2).apply {
+        add(null)
+        add(null)
+    }
+
     private var _verticesBufferId: Int = 0
 
     @WorkerThread

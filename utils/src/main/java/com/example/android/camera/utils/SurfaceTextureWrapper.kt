@@ -1,7 +1,7 @@
 package com.example.android.camera.utils
 
 import android.graphics.SurfaceTexture
-import android.opengl.GLES11Ext
+import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20.*
 import android.util.Size
 import androidx.annotation.WorkerThread
@@ -9,7 +9,7 @@ import androidx.annotation.WorkerThread
 class SurfaceTextureWrapper : SurfaceTextureExt {
 
     override val target: Int
-        get() = GLES11Ext.GL_TEXTURE_EXTERNAL_OES
+        get() = GL_TEXTURE_EXTERNAL_OES
 
     override val surfaceTexture: SurfaceTexture
         get() = _surfaceTexture
@@ -29,19 +29,21 @@ class SurfaceTextureWrapper : SurfaceTextureExt {
 
     @WorkerThread
     override fun createGLTexture() {
+        glEnable(GL_TEXTURE_EXTERNAL_OES)
         glGenTextures(_textureId.size, _textureId, 0)
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, _textureId[0])
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glBindTexture(target, _textureId[0])
+        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         _surfaceTexture.detachFromGLContext()
         _surfaceTexture.attachToGLContext(_textureId[0])
     }
 
     @WorkerThread
     override fun bind(drawer: SurfaceTextureDrawer): Int {
+        _surfaceTexture.updateTexImage()
         return _textureId[0]
     }
 

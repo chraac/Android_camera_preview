@@ -146,6 +146,8 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
                 throw UnsupportedOperationException("Failed to makeCurrent: $errorCode")
             }
 
+            // TODO: why?
+            GLES20.glGetError()
             _eglSurface = surface
         }
 
