@@ -334,15 +334,15 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
             floatArray[vertexOffset + INDEX_TEXTURE_V] = 0.0f
 
             vertexOffset += ATTRIBUTE_FLOAT_COUNT
-            floatArray[vertexOffset + INDEX_VERTEX_X] = texSize.width.toFloat()
-            floatArray[vertexOffset + INDEX_VERTEX_Y] = texSize.height.toFloat()
-            floatArray[vertexOffset + INDEX_TEXTURE_U] = 1.0f
-            floatArray[vertexOffset + INDEX_TEXTURE_V] = 1.0f
-
-            vertexOffset += ATTRIBUTE_FLOAT_COUNT
             floatArray[vertexOffset + INDEX_VERTEX_X] = 0.0f
             floatArray[vertexOffset + INDEX_VERTEX_Y] = texSize.height.toFloat()
             floatArray[vertexOffset + INDEX_TEXTURE_U] = 0.0f
+            floatArray[vertexOffset + INDEX_TEXTURE_V] = 1.0f
+
+            vertexOffset += ATTRIBUTE_FLOAT_COUNT
+            floatArray[vertexOffset + INDEX_VERTEX_X] = texSize.width.toFloat()
+            floatArray[vertexOffset + INDEX_VERTEX_Y] = texSize.height.toFloat()
+            floatArray[vertexOffset + INDEX_TEXTURE_U] = 1.0f
             floatArray[vertexOffset + INDEX_TEXTURE_V] = 1.0f
         }
 
