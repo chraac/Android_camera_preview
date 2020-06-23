@@ -81,16 +81,6 @@ class AutoFitSurfaceView @JvmOverloads constructor(
                 surfaceTextureWrapper.surfaceTexture.setOnFrameAvailableListener(
                         this@AutoFitSurfaceView, thread.handler)
                 glThread = thread
-
-                // TODO: blocking until createGLTexture return
-                mainScope.launch {
-                    val ret: Int = suspendCoroutine { continuation ->
-                        thread.handler.post {
-                            surfaceTextureWrapper.createGLTexture()
-                            continuation.resume(0)
-                        }
-                    }
-                }
             }
 
             outerSurfaceCallback?.surfaceCreated(holder)

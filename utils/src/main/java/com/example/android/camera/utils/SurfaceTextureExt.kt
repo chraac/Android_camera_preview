@@ -13,9 +13,6 @@ interface SurfaceTextureExt {
     val textureId: Int
 
     @WorkerThread
-    fun createGLTexture()
-
-    @WorkerThread
     fun bind(drawer: SurfaceTextureDrawer): Int
 
     @WorkerThread

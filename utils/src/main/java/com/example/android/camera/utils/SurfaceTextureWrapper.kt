@@ -23,26 +23,28 @@ class SurfaceTextureWrapper : SurfaceTextureExt {
     override val textureId: Int
         get() = _textureId[0]
 
-    private val _surfaceTexture = SurfaceTexture(0)
+    private val _surfaceTexture = SurfaceTexture(0).apply {
+        // detach SurfaceTexture form current thread cause we will draw in render thread later
+        detachFromGLContext()
+    }
+
     private var _size = Size(0, 0)
     private var _textureId = IntArray(1)
 
     @WorkerThread
-    override fun createGLTexture() {
-        glEnable(GL_TEXTURE_EXTERNAL_OES)
-        glGenTextures(_textureId.size, _textureId, 0)
-        glActiveTexture(GL_TEXTURE0)
-        glBindTexture(target, _textureId[0])
-        glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-        glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        _surfaceTexture.detachFromGLContext()
-        _surfaceTexture.attachToGLContext(_textureId[0])
-    }
-
-    @WorkerThread
     override fun bind(drawer: SurfaceTextureDrawer): Int {
+        if (_textureId[0] == 0) {
+            glEnable(GL_TEXTURE_EXTERNAL_OES)
+            glGenTextures(_textureId.size, _textureId, 0)
+            glActiveTexture(GL_TEXTURE0)
+            glBindTexture(target, _textureId[0])
+            glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+            glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            _surfaceTexture.attachToGLContext(_textureId[0])
+        }
+
         _surfaceTexture.updateTexImage()
         return _textureId[0]
     }

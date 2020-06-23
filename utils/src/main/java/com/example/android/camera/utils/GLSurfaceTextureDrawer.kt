@@ -173,7 +173,6 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
     }
 
     // 4x4
-    private var _transformMatrixChanged = true
     private val _transformMatrix: FloatArray = FloatArray(MATRIX_SIZE).apply {
         Matrix.setIdentityM(this, 0)
     }
