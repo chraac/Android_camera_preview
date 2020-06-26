@@ -1,3 +1,5 @@
+import java.util.regex.Pattern
+
 /*
  * Copyright 2020 The Android Open Source Project
  *
@@ -20,13 +22,19 @@ buildscript {
     // Top-level variables used for versioning
     ext.kotlin_version = '+'
     ext.java_version = JavaVersion.VERSION_1_8
+    ext.is_in_ci = Pattern.matches("(TRUE|true|1)", System.getenv("CI") + "")
 
     repositories {
-        maven { url 'https://maven.aliyun.com/repository/public/' }
-        maven { url 'https://maven.aliyun.com/repository/google/' }
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin/' }
-        google()
-        jcenter()
+        if (is_in_ci) {
+            println("Use default maven repo")
+            jcenter()
+            google()
+        } else {
+            println("Use aliyun maven repo")
+            maven { url 'https://maven.aliyun.com/repository/public/' }
+            maven { url 'https://maven.aliyun.com/repository/google/' }
+            maven { url 'https://maven.aliyun.com/repository/gradle-plugin/' }
+        }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:4.0.0'
@@ -40,11 +48,16 @@ buildscript {
 
 allprojects {
     repositories {
-        maven { url 'https://maven.aliyun.com/repository/public/' }
-        maven { url 'https://maven.aliyun.com/repository/google/' }
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin/' }
-        google()
-        jcenter()
+        if (is_in_ci) {
+            println("Use default maven repo")
+            jcenter()
+            google()
+        } else {
+            println("Use aliyun maven repo")
+            maven { url 'https://maven.aliyun.com/repository/public/' }
+            maven { url 'https://maven.aliyun.com/repository/google/' }
+            maven { url 'https://maven.aliyun.com/repository/gradle-plugin/' }
+        }
     }
 }
 
