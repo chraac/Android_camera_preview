@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.util.Size
 import android.view.Surface
+import androidx.annotation.AnyThread
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
 import javax.microedition.khronos.egl.EGL10
@@ -25,9 +26,6 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
     val handler: Handler by lazy {
         Handler(looper)
     }
-
-    val drawer: SurfaceTextureDrawer
-        get() = _drawer
 
     private var _eglDisplay: EGLDisplay = EGL14.EGL_NO_DISPLAY
     private var _eglSurface: EGLSurface = EGL14.EGL_NO_SURFACE
@@ -71,8 +69,12 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
         _eglConfig = configs[0]
     }
 
+    fun frameBegin(): SurfaceTextureDrawer {
+        return _drawer
+    }
+
     @WorkerThread
-    fun swapBuffer(): Int {
+    fun frameEnd(): Int {
         if (_eglDisplay == EGL14.EGL_NO_DISPLAY || _eglSurface == EGL14.EGL_NO_SURFACE) {
             return EGL14.EGL_BAD_DISPLAY
         }
@@ -81,19 +83,24 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
     }
 
     @MainThread
-    fun notifySurfaceSizeChange(width: Int, height: Int) {
+    fun notifySurfaceSizeChange(width: Int, height: Int) = post {
+        recreateSurface(width, height)
+    }
+
+    @AnyThread
+    fun post(runnable: () -> Unit) {
         if (!isAlive) {
             return
         }
 
         handler.post {
-            recreateSurface(width, height)
+            runnable.invoke()
         }
     }
 
     @MainThread
     override fun close() {
-        handler.post {
+        post {
             if (_eglDisplay != EGL14.EGL_NO_DISPLAY) {
                 EGL14.eglMakeCurrent(_eglDisplay, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT);
                 if (_eglSurface != EGL14.EGL_NO_SURFACE) {
@@ -115,6 +122,7 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
         join()
     }
 
+    @WorkerThread
     private fun recreateSurface(width: Int, height: Int) {
         if (_eglDisplay == EGL14.EGL_NO_DISPLAY ||
                 _eglContext == EGL14.EGL_NO_CONTEXT || _eglConfig == null) {
@@ -145,8 +153,6 @@ class GLHandlerThread @MainThread constructor(name: String, surface: Surface)
                 throw UnsupportedOperationException("Failed to makeCurrent: $errorCode")
             }
 
-            // TODO: why?
-            GLES20.glGetError()
             _eglSurface = surface
         }
 

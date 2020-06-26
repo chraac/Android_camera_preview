@@ -31,7 +31,7 @@ import androidx.lifecycle.LiveData
 class OrientationLiveData(
         context: Context,
         characteristics: CameraCharacteristics
-): LiveData<Int>() {
+) : LiveData<Int>() {
 
     private val listener = object : OrientationEventListener(context.applicationContext) {
         override fun onOrientationChanged(orientation: Int) {

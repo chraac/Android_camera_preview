@@ -47,7 +47,7 @@ fun getDisplaySmartSize(display: Display): SmartSize {
  * https://d.android.com/reference/android/hardware/camera2/CameraDevice and
  * https://developer.android.com/reference/android/hardware/camera2/params/StreamConfigurationMap
  */
-fun <T>getPreviewOutputSize(
+fun <T> getPreviewOutputSize(
         display: Display,
         characteristics: CameraCharacteristics,
         targetClass: Class<T>,

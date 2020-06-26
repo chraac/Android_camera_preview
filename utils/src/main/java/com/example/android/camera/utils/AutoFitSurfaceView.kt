@@ -19,17 +19,13 @@ package com.example.android.camera.utils
 import android.content.Context
 import android.graphics.SurfaceTexture
 import android.util.AttributeSet
-import android.util.Log
 import android.util.Size
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
-import kotlinx.coroutines.*
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
-import kotlin.math.roundToInt
+import java.util.concurrent.atomic.AtomicInteger
 
 private val TAG = AutoFitSurfaceView::class.java.simpleName
 
@@ -59,8 +55,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         }
 
 
-    private var aspectRatio = 0f
-
+    private var orientationInDegree = AtomicInteger(0)
 
     private var outerSurfaceCallback: SurfaceHolder.Callback? = null
 
@@ -68,8 +63,6 @@ class AutoFitSurfaceView @JvmOverloads constructor(
 
     private val surface = Surface(surfaceTextureWrapper.surfaceTexture)
     private var glThread: GLHandlerThread? = null
-
-    private val mainScope = MainScope()
 
     private val innerSurfaceCallback = object : SurfaceHolder.Callback {
 
@@ -95,7 +88,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         @MainThread
         override fun surfaceDestroyed(holder: SurfaceHolder?) {
             outerSurfaceCallback?.surfaceDestroyed(holder)
-            glThread?.run {
+            glThread?.post {
                 surfaceTextureWrapper.deleteGLTexture()
             }
 
@@ -111,45 +104,45 @@ class AutoFitSurfaceView @JvmOverloads constructor(
      * @param width  Camera resolution horizontal size
      * @param height Camera resolution vertical size
      */
-    fun setAspectRatio(width: Int, height: Int) {
+    @MainThread
+    fun setPreviewSurfaceSize(width: Int, height: Int) {
         require(width > 0 && height > 0) { "Size cannot be negative" }
-        aspectRatio = width.toFloat() / height.toFloat()
-        holder.setFixedSize(width, height)
-        glThread?.handler?.post {
+        glThread?.post {
             surfaceTextureWrapper.size = Size(width, height)
         }
-        requestLayout()
     }
 
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        val width = MeasureSpec.getSize(widthMeasureSpec)
-        val height = MeasureSpec.getSize(heightMeasureSpec)
-        if (aspectRatio == 0f) {
-            setMeasuredDimension(width, height)
-        } else {
-
-            // Performs center-crop transformation of the camera frames
-            val newWidth: Int
-            val newHeight: Int
-            val actualRatio = if (width > height) aspectRatio else 1f / aspectRatio
-            if (width < height * actualRatio) {
-                newHeight = height
-                newWidth = (height * actualRatio).roundToInt()
-            } else {
-                newWidth = width
-                newHeight = (width / actualRatio).roundToInt()
-            }
-
-            Log.d(TAG, "Measured dimensions set: $newWidth x $newHeight")
-            setMeasuredDimension(newWidth, newHeight)
-        }
-    }
+    @MainThread
+    fun setPreviewOrientation(orientation: Int) = this.orientationInDegree.set(orientation)
 
     @WorkerThread
     override fun onFrameAvailable(surfaceTexture: SurfaceTexture?) {
         val thread = glThread ?: return
-        thread.drawer.draw(surfaceTextureWrapper)
-        thread.swapBuffer()
+        val drawer = thread.frameBegin()
+
+        val orientation = this.orientationInDegree.get()
+
+        if (orientation != 0) {
+            drawer.save()
+            val centerX = width / 2
+            val centerY = height / 2
+            drawer.translate(centerX.toFloat(), centerY.toFloat(), 0f)
+            drawer.rotate(orientation.toFloat(), 0f, 0f, 1f)
+            when (orientation) {
+                0, 180 -> {
+                    drawer.translate(-(centerX.toFloat()), -(centerY.toFloat()), 0f)
+                }
+                90, 270 -> {
+                    drawer.translate(-(centerY.toFloat()), -(centerX.toFloat()), 0f)
+                }
+            }
+        }
+
+        drawer.draw(surfaceTextureWrapper)
+        if (orientation != 0) {
+            drawer.restore()
+        }
+
+        thread.frameEnd()
     }
 }

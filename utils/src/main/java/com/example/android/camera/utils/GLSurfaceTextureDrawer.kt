@@ -2,15 +2,16 @@ package com.example.android.camera.utils
 
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20.*
+import android.opengl.GLU
 import android.opengl.Matrix
 import android.util.Size
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
-import java.lang.RuntimeException
 import java.nio.FloatBuffer
 
 // 4 x 4
 private const val MATRIX_SIZE = 16
+private const val INITIAL_RESTORE_STATE_SIZE = 8
 private const val FLOAT_SIZE = java.lang.Float.SIZE / java.lang.Byte.SIZE
 
 private const val INDEX_VERTEX_X = 0
@@ -65,7 +66,8 @@ private val FRAGMENT_SHADER_OES = FRAGMENT_SHADER_TEMPLATE.format(
 private fun checkGLError() {
     val error = glGetError()
     if (error != GL_NO_ERROR) {
-        throw RuntimeException("glGetError: $error")
+        val errorString = GLU.gluErrorString(error) ?: "$error"
+        throw RuntimeException("glGetError: $errorString")
     }
 }
 
@@ -162,7 +164,7 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
         set(value) {
             field = value
             Matrix.orthoM(_projectionMatrix, 0, 0f, value.width.toFloat(),
-                    0f, value.height.toFloat(), 0f, 1f)
+                    value.height.toFloat(), 0f, 0f, 1f)
             _projectionMatrixChanged = true
         }
 
@@ -171,13 +173,6 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
     private val _projectionMatrix: FloatArray = FloatArray(MATRIX_SIZE).apply {
         Matrix.setIdentityM(this, 0)
     }
-
-    // 4x4
-    private val _transformMatrix: FloatArray = FloatArray(MATRIX_SIZE).apply {
-        Matrix.setIdentityM(this, 0)
-    }
-
-    private val _matrixBuffer: FloatArray = FloatArray(MATRIX_SIZE) // 4x4
 
     // 4 x (sizeof(vec2) + sizeof(vec2))
     private val _verticesBuffer = FloatBuffer.allocate(16).apply {
@@ -201,6 +196,49 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
     }
 
     private var _verticesBufferId: Int = 0
+
+    private val _tempMatrix: FloatArray = FloatArray(2 * MATRIX_SIZE)
+    private var _currentMatrixIndex = 0
+    private var _matricesBuffer =
+            FloatArray(INITIAL_RESTORE_STATE_SIZE * MATRIX_SIZE).apply {
+                Matrix.setIdentityM(this, 0)
+            }
+
+    override fun save() {
+        val nextMatrixIndex = _currentMatrixIndex + MATRIX_SIZE
+        if (nextMatrixIndex + MATRIX_SIZE > _matricesBuffer.size) {
+            _matricesBuffer = _matricesBuffer.copyOf(_matricesBuffer.size * 2)
+        }
+
+        System.arraycopy(_matricesBuffer, _currentMatrixIndex,
+                _matricesBuffer, nextMatrixIndex, MATRIX_SIZE)
+        _currentMatrixIndex = nextMatrixIndex
+    }
+
+    override fun translate(x: Float, y: Float, z: Float) {
+        Matrix.translateM(_matricesBuffer, _currentMatrixIndex, x, y, z)
+    }
+
+    override fun scale(sx: Float, sy: Float, sz: Float) {
+        Matrix.scaleM(_matricesBuffer, _currentMatrixIndex, sx, sy, sz)
+    }
+
+    override fun rotate(angle: Float, x: Float, y: Float, z: Float) {
+        if (angle == 0f) {
+            return
+        }
+
+        val temp = _tempMatrix
+        Matrix.setRotateM(temp, 0, angle, x, y, z)
+        val matrix = _matricesBuffer
+        Matrix.multiplyMM(temp, MATRIX_SIZE, matrix, _currentMatrixIndex, temp, 0)
+        System.arraycopy(temp, MATRIX_SIZE, matrix, _currentMatrixIndex, MATRIX_SIZE)
+    }
+
+    override fun restore() {
+        check(_currentMatrixIndex >= MATRIX_SIZE && _currentMatrixIndex % MATRIX_SIZE == 0)
+        _currentMatrixIndex -= MATRIX_SIZE
+    }
 
     @WorkerThread
     override fun draw(surfaceTexture: SurfaceTextureExt) {
@@ -277,7 +315,8 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
             checkGLError()
         }
 
-        glUniformMatrix4fv(program.uniformTransform, 1, false, _transformMatrix, 0)
+        glUniformMatrix4fv(program.uniformTransform, 1, false,
+                _matricesBuffer, _currentMatrixIndex)
         checkGLError()
 
         // texture

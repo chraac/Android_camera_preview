@@ -17,6 +17,10 @@ class SurfaceTextureWrapper : SurfaceTextureExt {
     override var size: Size
         get() = _size
         set(value) {
+            if (value != _size) {
+                _surfaceTexture.setDefaultBufferSize(value.width, value.height)
+            }
+
             _size = value
         }
 
