@@ -15,7 +15,6 @@ class DrawerUnitTest {
                 projectionMatrixChanged = value
             }
 
-        val openProjectionMatrix get() = projectionMatrix
         val openCurrentMatrixIndex get() = currentMatrixIndex
         val openMatricesBuffer get() = matricesBuffer
     }
@@ -29,11 +28,7 @@ class DrawerUnitTest {
         testObject.openProjectionMatrixChanged = false
 
         testObject.viewPortSize = Size(1920, 1080)
-        assertEquals(1920, testObject.viewPortSize.width)
-        assertEquals(1080, testObject.viewPortSize.height)
         assertEquals(true, testObject.openProjectionMatrixChanged)
-        assertEquals(2f / 1920f, testObject.openProjectionMatrix[0])
-        assertEquals(-2f / 1080f, testObject.openProjectionMatrix[5])
     }
 
     @Test
@@ -47,9 +42,11 @@ class DrawerUnitTest {
 
     @Test
     fun save_copyMatrixIntoNewPosition() {
-        testObject.translate(1f, 2f, 3f)
-        testObject.scale(4f, 5f, 6f)
-        testObject.rotate(180f, 7f, 8f, 9f)
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex] = 2f
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 4] = 3f
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 7] = 4f
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 8] = 5f
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 9] = 6f
         val previousMatrix = testObject.openMatricesBuffer.copyOfRange(
                 testObject.openCurrentMatrixIndex, testObject.openCurrentMatrixIndex + MATRIX_SIZE)
         testObject.save()
@@ -79,9 +76,11 @@ class DrawerUnitTest {
         val previousMatrix = testObject.openMatricesBuffer.copyOfRange(
                 testObject.openCurrentMatrixIndex, testObject.openCurrentMatrixIndex + MATRIX_SIZE)
         testObject.save()
-        testObject.translate(9f, 8f, 7f)
-        testObject.scale(6f, 5f, 4f)
-        testObject.rotate(90f, 3f, 2f, 1f)
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex] = 9f
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 4] = 8f
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 7] = 7f
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 8] = 6f
+        testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 9] = 5f
         val newMatrix = testObject.openMatricesBuffer.copyOfRange(
                 testObject.openCurrentMatrixIndex, testObject.openCurrentMatrixIndex + MATRIX_SIZE)
         assertEquals(false, previousMatrix.contentEquals(newMatrix))
