@@ -7,12 +7,8 @@ import android.opengl.Matrix
 import android.util.Size
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
+import com.example.android.camera.utils.DrawerBase.Companion.FLOAT_SIZE
 import java.nio.FloatBuffer
-
-// 4 x 4
-private const val MATRIX_SIZE = 16
-private const val INITIAL_RESTORE_STATE_SIZE = 8
-private const val FLOAT_SIZE = java.lang.Float.SIZE / java.lang.Byte.SIZE
 
 private const val INDEX_VERTEX_X = 0
 private const val INDEX_VERTEX_Y = 1
@@ -157,22 +153,9 @@ private class Program(
 }
 
 @MainThread
-class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
+class GLSurfaceTextureDrawer : DrawerBase(), SurfaceTextureDrawer, AutoCloseable {
 
-    override var viewPortSize: Size = Size(0, 0)
-        @WorkerThread
-        set(value) {
-            field = value
-            Matrix.orthoM(_projectionMatrix, 0, 0f, value.width.toFloat(),
-                    value.height.toFloat(), 0f, 0f, 1f)
-            _projectionMatrixChanged = true
-        }
-
-    // 4x4
-    private var _projectionMatrixChanged = true
-    private val _projectionMatrix: FloatArray = FloatArray(MATRIX_SIZE).apply {
-        Matrix.setIdentityM(this, 0)
-    }
+    private var _verticesBufferId: Int = 0
 
     // 4 x (sizeof(vec2) + sizeof(vec2))
     private val _verticesBuffer = FloatBuffer.allocate(16).apply {
@@ -190,55 +173,7 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
         floatArray[15] = 0.0f
     }
 
-    private val _programList = ArrayList<Program?>(2).apply {
-        add(null)
-        add(null)
-    }
-
-    private var _verticesBufferId: Int = 0
-
-    private val _tempMatrix: FloatArray = FloatArray(2 * MATRIX_SIZE)
-    private var _currentMatrixIndex = 0
-    private var _matricesBuffer =
-            FloatArray(INITIAL_RESTORE_STATE_SIZE * MATRIX_SIZE).apply {
-                Matrix.setIdentityM(this, 0)
-            }
-
-    override fun save() {
-        val nextMatrixIndex = _currentMatrixIndex + MATRIX_SIZE
-        if (nextMatrixIndex + MATRIX_SIZE > _matricesBuffer.size) {
-            _matricesBuffer = _matricesBuffer.copyOf(_matricesBuffer.size * 2)
-        }
-
-        System.arraycopy(_matricesBuffer, _currentMatrixIndex,
-                _matricesBuffer, nextMatrixIndex, MATRIX_SIZE)
-        _currentMatrixIndex = nextMatrixIndex
-    }
-
-    override fun translate(x: Float, y: Float, z: Float) {
-        Matrix.translateM(_matricesBuffer, _currentMatrixIndex, x, y, z)
-    }
-
-    override fun scale(sx: Float, sy: Float, sz: Float) {
-        Matrix.scaleM(_matricesBuffer, _currentMatrixIndex, sx, sy, sz)
-    }
-
-    override fun rotate(angle: Float, x: Float, y: Float, z: Float) {
-        if (angle == 0f) {
-            return
-        }
-
-        val temp = _tempMatrix
-        Matrix.setRotateM(temp, 0, angle, x, y, z)
-        val matrix = _matricesBuffer
-        Matrix.multiplyMM(temp, MATRIX_SIZE, matrix, _currentMatrixIndex, temp, 0)
-        System.arraycopy(temp, MATRIX_SIZE, matrix, _currentMatrixIndex, MATRIX_SIZE)
-    }
-
-    override fun restore() {
-        check(_currentMatrixIndex >= MATRIX_SIZE && _currentMatrixIndex % MATRIX_SIZE == 0)
-        _currentMatrixIndex -= MATRIX_SIZE
-    }
+    private val _programList = arrayListOf<Program?>(null, null)
 
     @WorkerThread
     override fun draw(surfaceTexture: SurfaceTextureExt) {
@@ -307,16 +242,16 @@ class GLSurfaceTextureDrawer : SurfaceTextureDrawer, AutoCloseable {
 
     @WorkerThread
     private fun prepareDrawParam(target: Int, texId: Int, program: Program) {
-        if (_projectionMatrixChanged) {
+        if (projectionMatrixChanged) {
             glUniformMatrix4fv(program.uniformProjection, 1, false,
-                    _projectionMatrix, 0)
-            _projectionMatrixChanged = false
+                    projectionMatrix, 0)
+            projectionMatrixChanged = false
             glViewport(0, 0, viewPortSize.width, viewPortSize.height)
             checkGLError()
         }
 
         glUniformMatrix4fv(program.uniformTransform, 1, false,
-                _matricesBuffer, _currentMatrixIndex)
+                matricesBuffer, currentMatrixIndex)
         checkGLError()
 
         // texture
