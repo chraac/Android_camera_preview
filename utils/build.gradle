@@ -21,7 +21,7 @@ android {
     compileSdkVersion 29
 
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 26
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
@@ -73,6 +73,8 @@ dependencies {
 
     // EXIF Interface
     implementation 'androidx.exifinterface:exifinterface:1.2.0'
+
+    implementation project(':extSurfaceTexture')
 
     // Unit testing
     testImplementation 'androidx.test.ext:junit:1.1.1'

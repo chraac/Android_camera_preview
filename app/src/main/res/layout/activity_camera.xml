@@ -25,4 +25,4 @@
     android:keepScreenOn="true"
     app:defaultNavHost="true"
     app:navGraph="@navigation/nav_graph"
-    tools:context=".CameraActivity" />
+    tools:context="com.chraac.camera.preview.CameraActivity" />

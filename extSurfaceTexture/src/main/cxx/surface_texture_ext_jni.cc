@@ -1,0 +1,230 @@
+
+#include "surface_texture_ext_jni.hh"
+#include <android/hardware_buffer_jni.h>
+#include <android/log.h>
+
+namespace {
+
+using namespace hardware_buffer_ext;
+
+constexpr const char *kLogTag = "SurfaceTextureExtJNI";
+constexpr const char *kEGLFunctionsClassName =
+    "com/chraac/extsurfacetexture/EGLFunctions";
+constexpr const char *kEGLImageClassName =
+    "com/chraac/extsurfacetexture/EGLImage";
+constexpr const char *kEGLObjectHandleClassName =
+    "android/opengl/EGLObjectHandle";
+
+/*
+ * Class:     com_chraac_extsurfacetexture_EGLFunctions
+ * Method:    nativeCreateImageFromHardwareBuffer
+ * Signature:
+ *   (Landroid/opengl/EGLDisplay;Landroid/hardware/HardwareBuffer;)Lcom/chraac/extsurfacetexture/EGLImage;
+ */
+jobject JNICALL JniNativeCreateImageFromHardwareBuffer(
+    JNIEnv *env, jobject egl_functions, jobject display,
+    jobject hardware_buffer) {
+  AHardwareBuffer *ahardware_buffer =
+      AHardwareBuffer_fromHardwareBuffer(env, hardware_buffer);
+  if (!ahardware_buffer) {
+    return nullptr;
+  }
+
+  auto &inst = SurfaceTextureExtJNI::GetInstance();
+  auto *functions = inst.GetEGLFunctionsFromObject(env, egl_functions);
+  if (!functions) {
+    return nullptr;
+  }
+
+  auto native_buffer =
+      functions->SoftLinkGetNativeClientBufferANDROID(ahardware_buffer);
+  EGLDisplay egl_display = inst.GetEGLHandlerFormEGLObjectHandle(env, display);
+  if (egl_display == EGL_NO_DISPLAY) {
+    egl_display = eglGetCurrentDisplay();
+  }
+
+  constexpr const EGLint s_attribs[] = {EGL_IMAGE_PRESERVED_KHR, EGL_FALSE,
+                                        EGL_NONE};
+  auto image = functions->SoftLinkCreateImageKHR(egl_display, EGL_NO_CONTEXT,
+                                                 EGL_NATIVE_BUFFER_ANDROID,
+                                                 native_buffer, s_attribs);
+  if (!image) {
+    __android_log_print(ANDROID_LOG_ERROR, kLogTag,
+                        "eglCreateImageKHR failed.");
+    return nullptr;
+  }
+
+  return inst.CreateEGLImageFormEGLImageKHR(env, image);
+}
+
+/*
+ * Class:     com_chraac_extsurfacetexture_EGLFunctions
+ * Method:    nativeDestroyImageKHR
+ * Signature:
+ * (Landroid/opengl/EGLDisplay;Lcom/chraac/extsurfacetexture/EGLImage;)V
+ */
+void JNICALL JniNativeDestroyImageKHR(JNIEnv *env, jobject egl_functions,
+                                      jobject display, jobject image) {
+  if (!image) {
+    return;
+  }
+
+  auto &inst = SurfaceTextureExtJNI::GetInstance();
+  auto *functions = inst.GetEGLFunctionsFromObject(env, egl_functions);
+  if (!functions) {
+    return;
+  }
+
+  EGLDisplay egl_display = inst.GetEGLHandlerFormEGLObjectHandle(env, display);
+  if (egl_display == EGL_NO_DISPLAY) {
+    egl_display = eglGetCurrentDisplay();
+  }
+
+  EGLImageKHR egl_image = inst.GetEGLHandlerFormEGLObjectHandle(env, image);
+  functions->SoftLinkDestroyImageKHR(egl_display, egl_image);
+}
+
+/*
+ * Class:     com_chraac_extsurfacetexture_EGLFunctions
+ * Method:    nativeImageTargetTexture2DOES
+ * Signature: (ILcom/chraac/extsurfacetexture/EGLImage;)V
+ */
+void JNICALL JniNativeImageTargetTexture2DOES(JNIEnv *env,
+                                              jobject egl_functions,
+                                              jint target, jobject image) {
+  if (!image) {
+    return;
+  }
+
+  auto &inst = SurfaceTextureExtJNI::GetInstance();
+  auto *functions = inst.GetEGLFunctionsFromObject(env, egl_functions);
+  if (!functions) {
+    return;
+  }
+
+  EGLImageKHR egl_image = inst.GetEGLHandlerFormEGLObjectHandle(env, image);
+  functions->SoftLinkEGLImageTargetTexture2DOES(target, egl_image);
+}
+
+const JNINativeMethod g_methods[] = {
+    {"nativeCreateImageFromHardwareBuffer",
+     "(Landroid/opengl/EGLDisplay;Landroid/hardware/HardwareBuffer;)Lcom/"
+     "chraac/extsurfacetexture/EGLImage;"
+     "EGLImage;",
+     (void *)JniNativeCreateImageFromHardwareBuffer},
+    {"nativeDestroyImageKHR",
+     "(Landroid/opengl/EGLDisplay;Lcom/chraac/extsurfacetexture/EGLImage;)V",
+     (void *)JniNativeDestroyImageKHR},
+    {"nativeImageTargetTexture2DOES",
+     "(ILcom/chraac/extsurfacetexture/EGLImage;)V",
+     (void *)JniNativeImageTargetTexture2DOES},
+};
+
+template <typename _TyParam>
+SurfaceTextureExtJNI::UniquePtrJClass::deleter_type
+GetJNIDestructorFunctor(JavaVM *jvm, void (JNIEnv::*deleter)(_TyParam)) {
+  return [jvm, deleter](_TyParam clazz) {
+    JNIEnv *env = nullptr;
+    if (jvm->GetEnv((void **)&env, JNI_VERSION_1_6) == JNI_OK) {
+      (*env.*deleter)(clazz);
+    }
+  };
+}
+
+} // namespace
+
+namespace hardware_buffer_ext {
+
+bool SurfaceTextureExtJNI::Load(JavaVM *jvm, JNIEnv *env) {
+  UniquePtrJClass functions_class(
+      env->FindClass(kEGLFunctionsClassName),
+      GetJNIDestructorFunctor(jvm, &JNIEnv::DeleteLocalRef));
+  UniquePtrJClass image_clazz(
+      env->FindClass(kEGLImageClassName),
+      GetJNIDestructorFunctor(jvm, &JNIEnv::DeleteLocalRef));
+  UniquePtrJClass egl_handler_clazz(
+      env->FindClass(kEGLObjectHandleClassName),
+      GetJNIDestructorFunctor(jvm, &JNIEnv::DeleteLocalRef));
+  if (!functions_class || !image_clazz) {
+    __android_log_print(ANDROID_LOG_ERROR, kLogTag, "FindClass failed.");
+    return false;
+  }
+
+  if (env->RegisterNatives(functions_class.get(), g_methods,
+                           sizeof(g_methods) / sizeof(g_methods[0])) < 0) {
+    __android_log_print(ANDROID_LOG_ERROR, kLogTag, "RegisterNatives failed.");
+    return false;
+  }
+
+  hardware_buffer_functions_ = std::make_unique<HardwareBufferFunctions>();
+  if (!hardware_buffer_functions_->IsValid()) {
+    hardware_buffer_functions_.reset();
+    __android_log_print(ANDROID_LOG_ERROR, kLogTag,
+                        "LoadFunctions failed with error.");
+    return false;
+  }
+
+  functions_handler_ =
+      env->GetFieldID(functions_class.get(), "nativeHandler", "J");
+  env->SetStaticLongField(functions_class.get(), functions_handler_,
+                          jlong(hardware_buffer_functions_.get()));
+
+  egl_image_constructor_ =
+      env->GetMethodID(image_clazz.get(), "<init>", "(J)V");
+  egl_handler_get_native_handler_ =
+      env->GetMethodID(egl_handler_clazz.get(), "getNativeHandle", "()J");
+
+  java_vm_ = jvm;
+  functions_clazz_ =
+      UniquePtrJClass((jclass)env->NewGlobalRef(functions_class.get()),
+                      GetJNIDestructorFunctor(jvm, &JNIEnv::DeleteGlobalRef));
+  egl_image_clazz_ =
+      UniquePtrJClass((jclass)env->NewGlobalRef(image_clazz.get()),
+                      GetJNIDestructorFunctor(jvm, &JNIEnv::DeleteGlobalRef));
+  egl_handler_clazz_ =
+      UniquePtrJClass((jclass)env->NewGlobalRef(egl_handler_clazz.get()),
+                      GetJNIDestructorFunctor(jvm, &JNIEnv::DeleteGlobalRef));
+  return true;
+}
+
+void SurfaceTextureExtJNI::Unload(JNIEnv *env) {
+  egl_handler_get_native_handler_ = nullptr;
+  egl_handler_clazz_.reset();
+  egl_image_constructor_ = nullptr;
+  egl_image_clazz_.reset();
+  env->SetStaticLongField(functions_clazz_.get(), functions_handler_, jlong(0));
+  functions_handler_ = nullptr;
+  env->UnregisterNatives(functions_clazz_.get());
+  functions_clazz_.reset();
+  hardware_buffer_functions_.reset();
+  java_vm_ = nullptr;
+}
+
+void *SurfaceTextureExtJNI::GetEGLHandlerFormEGLObjectHandle(JNIEnv *env,
+                                                             jobject image) {
+  if (!image) {
+    return nullptr;
+  }
+
+  return EGLImageKHR(
+      env->CallLongMethod(image, egl_handler_get_native_handler_));
+}
+
+jobject SurfaceTextureExtJNI::CreateEGLImageFormEGLImageKHR(JNIEnv *env,
+                                                            EGLImageKHR image) {
+  if (!image) {
+    return nullptr;
+  }
+
+  return env->NewObject(egl_image_clazz_.get(), egl_image_constructor_,
+                        jlong(image));
+}
+
+HardwareBufferFunctions *
+SurfaceTextureExtJNI::GetEGLFunctionsFromObject(JNIEnv *env,
+                                                jobject functions) {
+  return reinterpret_cast<HardwareBufferFunctions *>(
+      env->GetLongField(functions, functions_handler_));
+}
+
+} // namespace hardware_buffer_ext

@@ -22,7 +22,7 @@
 
     <fragment
         android:id="@+id/permissions_fragment"
-        android:name="com.example.android.camera2.video.fragments.PermissionsFragment"
+        android:name="com.chraac.camera.preview.fragments.PermissionsFragment"
         android:label="Permissions" >
 
         <action
@@ -35,7 +35,7 @@
 
     <fragment
         android:id="@+id/selector_fragment"
-        android:name="com.example.android.camera2.video.fragments.SelectorFragment"
+        android:name="com.chraac.camera.preview.fragments.SelectorFragment"
         android:label="Selector" >
 
         <action
@@ -47,7 +47,7 @@
 
     <fragment
         android:id="@+id/camera_fragment"
-        android:name="com.example.android.camera2.video.fragments.CameraFragment"
+        android:name="com.chraac.camera.preview.fragments.CameraFragment"
         android:label="Camera" >
 
         <argument
