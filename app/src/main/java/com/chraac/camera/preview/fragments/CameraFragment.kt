@@ -108,14 +108,9 @@ class CameraFragment : Fragment() {
                         viewFinder.display, characteristics, SurfaceHolder::class.java)
                 Log.d(TAG, "View finder size: ${viewFinder.width} x ${viewFinder.height}")
                 Log.d(TAG, "Selected preview size: $previewSize")
-                val surface =
-                        viewFinder.setPreviewSurfaceSizeAsync(previewSize.width, previewSize.height)
-                                ?: throw IllegalStateException("Null surface return")
-
                 // To ensure that size is set, initialize camera in the view's thread
-                lifecycleScope.launch {
-                    initializeCamera(surface)
-                }
+                initializeCamera(viewFinder.setPreviewSurfaceSizeAsync(
+                        previewSize.width, previewSize.height))
             }
         }
 

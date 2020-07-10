@@ -103,10 +103,10 @@ class AutoFitSurfaceView @JvmOverloads constructor(
      * @param height Camera resolution vertical size
      */
     @MainThread
-    fun setPreviewSurfaceSizeAsync(width: Int, height: Int): Deferred<Surface>? {
+    fun setPreviewSurfaceSizeAsync(width: Int, height: Int): Deferred<Surface> {
         require(width > 0 && height > 0) { "Size cannot be negative" }
 
-        val glThread = glThread ?: return null
+        val glThread = glThread ?: throw IllegalStateException("glThread is null")
         return mainScope.async(glThread.handler.asCoroutineDispatcher()) {
             var manager = surfaceTextureManager
             if (manager == null || manager.size != Size(width, height)) {
