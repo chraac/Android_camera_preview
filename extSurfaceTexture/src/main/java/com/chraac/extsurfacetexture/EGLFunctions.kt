@@ -13,18 +13,18 @@ object EGLFunctions {
         System.loadLibrary("hardware_buffer_ext")
     }
 
-    fun eglCreateImageFromHardwareBuffer(display: EGLDisplay, hardwareBuffer: HardwareBuffer?): EGLImage? =
+    fun eglCreateImageFromHardwareBuffer(display: EGLDisplay, hardwareBuffer: HardwareBuffer?): EGLImageKHR? =
             nativeCreateImageFromHardwareBuffer(native, display, hardwareBuffer)
 
-    fun eglDestroyImageKHR(display: EGLDisplay, image: EGLImage?) =
+    fun eglDestroyImageKHR(display: EGLDisplay, image: EGLImageKHR?) =
             nativeDestroyImageKHR(native, display, image)
 
-    fun eglImageTargetTexture2DOES(target: Int, image: EGLImage?) =
+    fun eglImageTargetTexture2DOES(target: Int, image: EGLImageKHR?) =
             nativeImageTargetTexture2DOES(native, target, image)
 
     private external fun nativeCreateImageFromHardwareBuffer(
-            native: Long, display: EGLDisplay, hardwareBuffer: HardwareBuffer?): EGLImage?
+            native: Long, display: EGLDisplay, hardwareBuffer: HardwareBuffer?): EGLImageKHR?
 
-    private external fun nativeDestroyImageKHR(native: Long, display: EGLDisplay, image: EGLImage?)
-    private external fun nativeImageTargetTexture2DOES(native: Long, target: Int, image: EGLImage?)
+    private external fun nativeDestroyImageKHR(native: Long, display: EGLDisplay, image: EGLImageKHR?)
+    private external fun nativeImageTargetTexture2DOES(native: Long, target: Int, image: EGLImageKHR?)
 }

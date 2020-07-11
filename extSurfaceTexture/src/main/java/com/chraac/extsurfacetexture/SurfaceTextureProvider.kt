@@ -9,6 +9,7 @@ import androidx.annotation.WorkerThread
 interface SurfaceTextureProvider : AutoCloseable {
 
     interface OnFrameAvailableListener {
+        @WorkerThread
         fun onFrameAvailable(surfaceTexture: SurfaceTextureProvider)
     }
 

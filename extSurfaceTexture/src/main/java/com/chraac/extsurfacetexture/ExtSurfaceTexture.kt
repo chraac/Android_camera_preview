@@ -1,6 +1,7 @@
 package com.chraac.extsurfacetexture
 
 import android.annotation.TargetApi
+import android.hardware.HardwareBuffer
 import android.media.Image
 import android.media.ImageReader
 import android.opengl.EGL14.EGL_NO_DISPLAY
@@ -8,9 +9,9 @@ import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20.*
 import android.opengl.GLU
 import android.os.Handler
+import android.os.Looper
 import android.util.Size
 import android.view.Surface
-import androidx.annotation.AnyThread
 import androidx.annotation.GuardedBy
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
@@ -55,7 +56,12 @@ class ExtSurfaceTexture constructor(
 
     private var _glTextureId = 0
 
-    private var _eglImage: EGLImage? = null
+    private var _hardwareBuffer: HardwareBuffer? = null
+
+    private var _eglImageKHR: EGLImageKHR? = null
+
+    @GuardedBy("this")
+    private var _handler: Handler? = null
 
     @GuardedBy("this")
     private var _surfaceTextureListener: SurfaceTextureProvider.OnFrameAvailableListener? = null
@@ -82,34 +88,53 @@ class ExtSurfaceTexture constructor(
 
     @WorkerThread
     override fun updateTexImage() {
+        check(_handler != null && Looper.myLooper() == _handler?.looper) { "Illegal update thread" }
         val textureId = if (_glTextureId != 0) _glTextureId else return
-        val image = _image ?: return
         checkGLError()
-        EGLFunctions.eglDestroyImageKHR(EGL_NO_DISPLAY, _eglImage)
-        checkGLError()
-        _eglImage = EGLFunctions.eglCreateImageFromHardwareBuffer(EGL_NO_DISPLAY, image.hardwareBuffer)
-        checkGLError()
-
-        glActiveTexture(GL_TEXTURE0)
-        glBindTexture(TEXTURE_TARGET, textureId)
-        checkGLError()
-        EGLFunctions.eglImageTargetTexture2DOES(TEXTURE_TARGET, _eglImage)
-        checkGLError()
+        releaseTexImage()
+        try {
+            val image = imageReader.acquireLatestImage() ?: return
+            _image = image
+            val hardwareBuffer = image.hardwareBuffer
+                    ?: throw IllegalStateException("Invalid HardwareBuffer")
+            _hardwareBuffer = hardwareBuffer
+            _eglImageKHR = EGLFunctions.eglCreateImageFromHardwareBuffer(EGL_NO_DISPLAY, hardwareBuffer)
+                    ?: throw IllegalStateException("Invalid EGLImage")
+            glActiveTexture(GL_TEXTURE0)
+            glBindTexture(TEXTURE_TARGET, textureId)
+            checkGLError()
+            EGLFunctions.eglImageTargetTexture2DOES(TEXTURE_TARGET, _eglImageKHR)
+            checkGLError()
+        } catch (e: IllegalStateException) {
+            /**
+             * This operation will fail by throwing an {@link java.lang.IllegalStateException} if
+             * {@code android.media.ImageReader.maxImages} have been acquired with
+             * {@link android.media.ImageReader#acquireLatestImage} or
+             * {@link android.media.ImageReader#acquireNextImage}.
+             */
+            releaseTexImage()
+            return
+        }
     }
 
     @WorkerThread
     override fun releaseTexImage() {
-        val textureId = if (_glTextureId != 0) _glTextureId else return
+        check(_handler == null || Looper.myLooper() == _handler?.looper) { "Illegal release thread" }
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(TEXTURE_TARGET, textureId)
-        EGLFunctions.eglImageTargetTexture2DOES(TEXTURE_TARGET, null)
-        EGLFunctions.eglDestroyImageKHR(EGL_NO_DISPLAY, _eglImage)
-        _eglImage = null
+        glBindTexture(TEXTURE_TARGET, 0)
+        checkGLError()
+        EGLFunctions.eglDestroyImageKHR(EGL_NO_DISPLAY, _eglImageKHR)
+        _eglImageKHR = null
+        _hardwareBuffer?.close()
+        _hardwareBuffer = null
+        _image?.close()
+        _image = null
+        _eglImageKHR = null
     }
 
     @WorkerThread
     override fun attachToGLContext(texName: Int) {
-        releaseTexImage()
+        detachFromGLContext()
         checkGLError()
         glActiveTexture(GL_TEXTURE0)
         glBindTexture(TEXTURE_TARGET, textureId)
@@ -120,44 +145,41 @@ class ExtSurfaceTexture constructor(
         glTexParameteri(TEXTURE_TARGET, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         checkGLError()
         _glTextureId = texName
+        val looper = Looper.myLooper()
+        check(looper != null) { "Unable to get Looper" }
+        _handler = Handler(looper)
     }
 
     @WorkerThread
     override fun detachFromGLContext() {
+        check(_handler == null || Looper.myLooper() == _handler?.looper) { "Illegal detach thread" }
         releaseTexImage()
+        glBindTexture(TEXTURE_TARGET, 0)
         _glTextureId = 0
     }
 
     @WorkerThread
     override fun close() = synchronized(this) {
+        check(_handler != null && Looper.myLooper() == _handler?.looper) { "Illegal close thread" }
         _surfaceTextureListener = null
         detachFromGLContext()
-        _image?.close()
-        _image = null
         imageReader.close()
-        return@synchronized
+        _handler = null
     }
 
     @WorkerThread
-    override fun onImageAvailable(reader: ImageReader?) {
-        val listener: SurfaceTextureProvider.OnFrameAvailableListener
-        synchronized(this) {
-            listener = _surfaceTextureListener ?: return
-            _image?.close()
-            _image = try {
-                imageReader.acquireLatestImage() ?: return
-            } catch (e: IllegalStateException) {
-                /**
-                 * This operation will fail by throwing an {@link java.lang.IllegalStateException} if
-                 * {@code android.media.ImageReader.maxImages} have been acquired with
-                 * {@link android.media.ImageReader#acquireLatestImage} or
-                 * {@link android.media.ImageReader#acquireNextImage}.
-                 */
-                return
-            }
-        }
-
+    override fun onImageAvailable(reader: ImageReader?) = synchronized(this) {
+        val listener = _surfaceTextureListener ?: return
         listener.onFrameAvailable(this)
+    }
+
+    private fun runInHandlerThread(block: () -> Unit) = synchronized(this) {
+        val handler = _handler ?: return@synchronized
+        if (handler.looper == Looper.myLooper()) {
+            handler.post(block)
+        } else {
+            block.invoke()
+        }
     }
 
     private fun checkGLError() = synchronized(this) {
