@@ -14,17 +14,17 @@ object EGLFunctions {
     }
 
     fun eglCreateImageFromHardwareBuffer(display: EGLDisplay, hardwareBuffer: HardwareBuffer?): EGLImage? =
-            nativeCreateImageFromHardwareBuffer(display, hardwareBuffer)
+            nativeCreateImageFromHardwareBuffer(native, display, hardwareBuffer)
 
     fun eglDestroyImageKHR(display: EGLDisplay, image: EGLImage?) =
-            nativeDestroyImageKHR(display, image)
+            nativeDestroyImageKHR(native, display, image)
 
     fun eglImageTargetTexture2DOES(target: Int, image: EGLImage?) =
-            nativeImageTargetTexture2DOES(target, image)
+            nativeImageTargetTexture2DOES(native, target, image)
 
     private external fun nativeCreateImageFromHardwareBuffer(
-            display: EGLDisplay, hardwareBuffer: HardwareBuffer?): EGLImage?
+            native: Long, display: EGLDisplay, hardwareBuffer: HardwareBuffer?): EGLImage?
 
-    private external fun nativeDestroyImageKHR(display: EGLDisplay, image: EGLImage?)
-    private external fun nativeImageTargetTexture2DOES(target: Int, image: EGLImage?)
+    private external fun nativeDestroyImageKHR(native: Long, display: EGLDisplay, image: EGLImage?)
+    private external fun nativeImageTargetTexture2DOES(native: Long, target: Int, image: EGLImage?)
 }

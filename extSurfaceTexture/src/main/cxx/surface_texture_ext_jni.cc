@@ -19,23 +19,19 @@ constexpr const char *kEGLObjectHandleClassName =
  * Class:     com_chraac_extsurfacetexture_EGLFunctions
  * Method:    nativeCreateImageFromHardwareBuffer
  * Signature:
- *   (Landroid/opengl/EGLDisplay;Landroid/hardware/HardwareBuffer;)Lcom/chraac/extsurfacetexture/EGLImage;
+ *   (JLandroid/opengl/EGLDisplay;Landroid/hardware/HardwareBuffer;)Lcom/chraac/extsurfacetexture/EGLImage;
  */
 jobject JNICALL JniNativeCreateImageFromHardwareBuffer(
-    JNIEnv *env, jobject egl_functions, jobject display,
+    JNIEnv *env, jobject, jlong native, jobject display,
     jobject hardware_buffer) {
   AHardwareBuffer *ahardware_buffer =
       AHardwareBuffer_fromHardwareBuffer(env, hardware_buffer);
-  if (!ahardware_buffer) {
+  if (!native || !ahardware_buffer) {
     return nullptr;
   }
 
   auto &inst = SurfaceTextureExtJNI::GetInstance();
-  auto *functions = inst.GetEGLFunctionsFromObject(env, egl_functions);
-  if (!functions) {
-    return nullptr;
-  }
-
+  auto *functions = reinterpret_cast<HardwareBufferFunctions *>(native);
   auto native_buffer =
       functions->SoftLinkGetNativeClientBufferANDROID(ahardware_buffer);
   EGLDisplay egl_display = inst.GetEGLHandlerFormEGLObjectHandle(env, display);
@@ -61,20 +57,16 @@ jobject JNICALL JniNativeCreateImageFromHardwareBuffer(
  * Class:     com_chraac_extsurfacetexture_EGLFunctions
  * Method:    nativeDestroyImageKHR
  * Signature:
- * (Landroid/opengl/EGLDisplay;Lcom/chraac/extsurfacetexture/EGLImage;)V
+ * (JLandroid/opengl/EGLDisplay;Lcom/chraac/extsurfacetexture/EGLImage;)V
  */
-void JNICALL JniNativeDestroyImageKHR(JNIEnv *env, jobject egl_functions,
+void JNICALL JniNativeDestroyImageKHR(JNIEnv *env, jobject, jlong native,
                                       jobject display, jobject image) {
-  if (!image) {
+  if (!native || !image) {
     return;
   }
 
   auto &inst = SurfaceTextureExtJNI::GetInstance();
-  auto *functions = inst.GetEGLFunctionsFromObject(env, egl_functions);
-  if (!functions) {
-    return;
-  }
-
+  auto *functions = reinterpret_cast<HardwareBufferFunctions *>(native);
   EGLDisplay egl_display = inst.GetEGLHandlerFormEGLObjectHandle(env, display);
   if (egl_display == EGL_NO_DISPLAY) {
     egl_display = eglGetCurrentDisplay();
@@ -87,36 +79,32 @@ void JNICALL JniNativeDestroyImageKHR(JNIEnv *env, jobject egl_functions,
 /*
  * Class:     com_chraac_extsurfacetexture_EGLFunctions
  * Method:    nativeImageTargetTexture2DOES
- * Signature: (ILcom/chraac/extsurfacetexture/EGLImage;)V
+ * Signature: (JILcom/chraac/extsurfacetexture/EGLImage;)V
  */
-void JNICALL JniNativeImageTargetTexture2DOES(JNIEnv *env,
-                                              jobject egl_functions,
-                                              jint target, jobject image) {
-  if (!image) {
+void JNICALL JniNativeImageTargetTexture2DOES(JNIEnv *env, jobject,
+                                              jlong native, jint target,
+                                              jobject image) {
+  if (!native) {
     return;
   }
 
   auto &inst = SurfaceTextureExtJNI::GetInstance();
-  auto *functions = inst.GetEGLFunctionsFromObject(env, egl_functions);
-  if (!functions) {
-    return;
-  }
-
-  EGLImageKHR egl_image = inst.GetEGLHandlerFormEGLObjectHandle(env, image);
+  auto *functions = reinterpret_cast<HardwareBufferFunctions *>(native);
+  EGLImageKHR egl_image =
+      image ? inst.GetEGLHandlerFormEGLObjectHandle(env, image) : nullptr;
   functions->SoftLinkEGLImageTargetTexture2DOES(target, egl_image);
 }
 
 const JNINativeMethod g_methods[] = {
     {"nativeCreateImageFromHardwareBuffer",
-     "(Landroid/opengl/EGLDisplay;Landroid/hardware/HardwareBuffer;)Lcom/"
-     "chraac/extsurfacetexture/EGLImage;"
-     "EGLImage;",
+     "(JLandroid/opengl/EGLDisplay;Landroid/hardware/HardwareBuffer;)"
+     "Lcom/chraac/extsurfacetexture/EGLImage;",
      (void *)JniNativeCreateImageFromHardwareBuffer},
     {"nativeDestroyImageKHR",
-     "(Landroid/opengl/EGLDisplay;Lcom/chraac/extsurfacetexture/EGLImage;)V",
+     "(JLandroid/opengl/EGLDisplay;Lcom/chraac/extsurfacetexture/EGLImage;)V",
      (void *)JniNativeDestroyImageKHR},
     {"nativeImageTargetTexture2DOES",
-     "(ILcom/chraac/extsurfacetexture/EGLImage;)V",
+     "(JILcom/chraac/extsurfacetexture/EGLImage;)V",
      (void *)JniNativeImageTargetTexture2DOES},
 };
 
@@ -165,7 +153,7 @@ bool SurfaceTextureExtJNI::Load(JavaVM *jvm, JNIEnv *env) {
   }
 
   functions_handler_ =
-      env->GetFieldID(functions_class.get(), "nativeHandler", "J");
+      env->GetStaticFieldID(functions_class.get(), "native", "J");
   env->SetStaticLongField(functions_class.get(), functions_handler_,
                           jlong(hardware_buffer_functions_.get()));
 
@@ -218,13 +206,6 @@ jobject SurfaceTextureExtJNI::CreateEGLImageFormEGLImageKHR(JNIEnv *env,
 
   return env->NewObject(egl_image_clazz_.get(), egl_image_constructor_,
                         jlong(image));
-}
-
-HardwareBufferFunctions *
-SurfaceTextureExtJNI::GetEGLFunctionsFromObject(JNIEnv *env,
-                                                jobject functions) {
-  return reinterpret_cast<HardwareBufferFunctions *>(
-      env->GetLongField(functions, functions_handler_));
 }
 
 } // namespace hardware_buffer_ext

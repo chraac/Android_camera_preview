@@ -45,14 +45,17 @@ class SurfaceTextureManagerImpl(
     @WorkerThread
     override fun bind(drawer: SurfaceTextureDrawer): Int {
         if (_textureId[0] == 0) {
-            glEnable(GL_TEXTURE_EXTERNAL_OES)
+            checkGLError()
             glGenTextures(_textureId.size, _textureId, 0)
+            checkGLError()
             glActiveTexture(GL_TEXTURE0)
             glBindTexture(target, _textureId[0])
+            checkGLError()
             glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
             glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
             glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
             glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            checkGLError()
             _surfaceTexture.attachToGLContext(_textureId[0])
         }
 

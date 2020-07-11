@@ -57,7 +57,7 @@ private val FRAGMENT_SHADER_TEX = FRAGMENT_SHADER_TEMPLATE.format(
 private val FRAGMENT_SHADER_OES = FRAGMENT_SHADER_TEMPLATE.format(
         "#extension GL_OES_EGL_image_external: require", "samplerExternalOES")
 
-private fun checkGLError() {
+internal fun checkGLError() {
     val error = glGetError()
     if (error != GL_NO_ERROR) {
         val errorString = GLU.gluErrorString(error) ?: "$error"

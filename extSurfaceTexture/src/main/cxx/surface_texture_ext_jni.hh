@@ -25,8 +25,6 @@ public:
 
   void *GetEGLHandlerFormEGLObjectHandle(JNIEnv *env, jobject image);
   jobject CreateEGLImageFormEGLImageKHR(JNIEnv *env, EGLImageKHR image);
-  HardwareBufferFunctions *GetEGLFunctionsFromObject(JNIEnv *env,
-                                                     jobject functions);
 
 private:
   SurfaceTextureExtJNI() = default;
