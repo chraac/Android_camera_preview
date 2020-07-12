@@ -17,6 +17,7 @@
 package com.chraac.camera.preview.utils
 
 import android.content.Context
+import android.graphics.ImageFormat.*
 import android.util.AttributeSet
 import android.util.Size
 import android.view.Surface
@@ -24,6 +25,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
+import com.chraac.extsurfacetexture.ExtSurfaceTexture
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.android.asCoroutineDispatcher
@@ -111,7 +113,8 @@ class AutoFitSurfaceView @JvmOverloads constructor(
             var manager = surfaceTextureManager
             if (manager == null || manager.size != Size(width, height)) {
                 manager?.close()
-                manager = SurfaceTextureManagerImpl(SurfaceTextureProviderImpl(width, height))
+                manager = SurfaceTextureManagerImpl(
+                        ExtSurfaceTexture(width, height, YUV_420_888, 3, 0))
                 manager.setFrameAvailableListener(
                         this@AutoFitSurfaceView, glThread.handler)
                 surfaceTextureManager = manager
