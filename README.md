@@ -1,15 +1,8 @@
 
-Android Camera2Preview Sample
+Android Camera Preview Sample
 ===========================
 
 This sample captures video via the Camera2 API and then draw to screen by OpenGLES.
-
-Pipeline status
---------------
-
-| Stage | Status |
-| --- | --- |
-| Build | ![Android_camera_preview](https://circleci.com/gh/chraac/Android_camera_preview.svg?style=svg) |
 
 Pre-requisites
 --------------
@@ -23,11 +16,3 @@ Getting Started
 
 This sample uses the Gradle build system. To build this project, use the
 "gradlew build" command or use "Import Project" in Android Studio.
-
-Support
--------
-
-- Stack Overflow: http://stackoverflow.com/questions/tagged/android
-
-If you've found an error in this sample, please file an issue:
-https://github.com/chraac/Android_camera_preview
