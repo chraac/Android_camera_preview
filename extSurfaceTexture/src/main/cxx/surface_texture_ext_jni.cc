@@ -9,7 +9,7 @@ using namespace hardware_buffer_ext;
 
 constexpr const char *kLogTag = "SurfaceTextureExtJNI";
 constexpr const char *kEGLFunctionsClassName =
-    "com/chraac/extsurfacetexture/EGLFunctions";
+    "com/chraac/extsurfacetexture/EGLFunctionsImpl";
 constexpr const char *kEGLImageClassName =
     "com/chraac/extsurfacetexture/EGLImageKHR";
 constexpr const char *kEGLObjectHandleClassName =
@@ -78,12 +78,12 @@ void JNICALL JniNativeDestroyImageKHR(JNIEnv *env, jobject, jlong native,
 
 /*
  * Class:     com_chraac_extsurfacetexture_EGLFunctions
- * Method:    nativeImageTargetTexture2DOES
+ * Method:    nativeEGLImageTargetTexture2DOES
  * Signature: (JILcom/chraac/extsurfacetexture/EGLImage;)V
  */
-void JNICALL JniNativeImageTargetTexture2DOES(JNIEnv *env, jobject,
-                                              jlong native, jint target,
-                                              jobject image) {
+void JNICALL JniNativeEGLImageTargetTexture2DOES(JNIEnv *env, jobject,
+                                                 jlong native, jint target,
+                                                 jobject image) {
   if (!native) {
     return;
   }
@@ -105,15 +105,15 @@ const JNINativeMethod g_methods[] = {
      "(JLandroid/opengl/EGLDisplay;Lcom/chraac/extsurfacetexture/"
      "EGLImageKHR;)V",
      (void *)JniNativeDestroyImageKHR},
-    {"nativeImageTargetTexture2DOES",
+    {"nativeEGLImageTargetTexture2DOES",
      "(JILcom/chraac/extsurfacetexture/EGLImageKHR;)V",
-     (void *)JniNativeImageTargetTexture2DOES},
+     (void *)JniNativeEGLImageTargetTexture2DOES},
 };
 
-template <typename _TyParam>
+template <typename TyParam>
 SurfaceTextureExtJNI::UniquePtrJClass::deleter_type
-GetJNIDestructorFunctor(JavaVM *jvm, void (JNIEnv::*deleter)(_TyParam)) {
-  return [jvm, deleter](_TyParam clazz) {
+GetJNIDestructorFunctor(JavaVM *jvm, void (JNIEnv::*deleter)(TyParam)) {
+  return [jvm, deleter](TyParam clazz) {
     JNIEnv *env = nullptr;
     if (jvm->GetEnv((void **)&env, JNI_VERSION_1_6) == JNI_OK) {
       (*env.*deleter)(clazz);
@@ -190,14 +190,15 @@ void SurfaceTextureExtJNI::Unload(JNIEnv *env) {
   java_vm_ = nullptr;
 }
 
-void *SurfaceTextureExtJNI::GetEGLHandlerFormEGLObjectHandle(JNIEnv *env,
-                                                             jobject image) {
-  if (!image) {
+void *
+SurfaceTextureExtJNI::GetEGLHandlerFormEGLObjectHandle(JNIEnv *env,
+                                                       jobject egl_object) {
+  if (!egl_object) {
     return nullptr;
   }
 
   return EGLImageKHR(
-      env->CallLongMethod(image, egl_handler_get_native_handler_));
+      env->CallLongMethod(egl_object, egl_handler_get_native_handler_));
 }
 
 jobject SurfaceTextureExtJNI::CreateEGLImageFormEGLImageKHR(JNIEnv *env,

@@ -113,8 +113,9 @@ class AutoFitSurfaceView @JvmOverloads constructor(
             var manager = surfaceTextureManager
             if (manager == null || manager.size != Size(width, height)) {
                 manager?.close()
-                manager = SurfaceTextureManagerImpl(
-                        ExtSurfaceTexture(width, height, YUV_420_888, 16, 0))
+                val surfaceTexture = ExtSurfaceTexture(
+                        width, height, YUV_420_888, 16, 0, GLES20Functions())
+                manager = SurfaceTextureManagerImpl(surfaceTexture)
                 manager.setFrameAvailableListener(
                         this@AutoFitSurfaceView, glThread.handler)
                 surfaceTextureManager = manager

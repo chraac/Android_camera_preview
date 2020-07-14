@@ -1,12 +1,18 @@
 package com.chraac.camera.preview.utils
 
+import android.os.Build
 import android.util.Size
 import com.chraac.camera.preview.utils.DrawerBase.Companion.INITIAL_RESTORE_STATE_SIZE
 import com.chraac.camera.preview.utils.DrawerBase.Companion.MATRIX_SIZE
 import junit.framework.TestCase.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
-class DrawerUnitTest {
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [Build.VERSION_CODES.P], manifest = Config.NONE)
+class DrawerBaseUnitTest {
 
     class DummyDrawer : DrawerBase() {
         var openProjectionMatrixChanged
@@ -22,7 +28,7 @@ class DrawerUnitTest {
     private val testObject = DummyDrawer()
 
     @Test
-    fun viewPortSize_projectionMatrixChange() {
+    fun `viewPortSize will change projection matrix`() {
         assertEquals(0, testObject.viewPortSize.width)
         assertEquals(0, testObject.viewPortSize.height)
         testObject.openProjectionMatrixChanged = false
@@ -32,7 +38,7 @@ class DrawerUnitTest {
     }
 
     @Test
-    fun save_indexChangeAfterSave() {
+    fun `save will change index`() {
         val matrixIndex = testObject.openCurrentMatrixIndex
         testObject.save()
         assertEquals(matrixIndex + MATRIX_SIZE, testObject.openCurrentMatrixIndex)
@@ -41,7 +47,7 @@ class DrawerUnitTest {
     }
 
     @Test
-    fun save_copyMatrixIntoNewPosition() {
+    fun `save will copy matrix into new position`() {
         testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex] = 2f
         testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 4] = 3f
         testObject.openMatricesBuffer[testObject.openCurrentMatrixIndex + 7] = 4f
@@ -57,7 +63,7 @@ class DrawerUnitTest {
     }
 
     @Test
-    fun save_matrixBufferExpand() {
+    fun `save will expand matrix buffer`() {
         val end = INITIAL_RESTORE_STATE_SIZE + 10
         val initIndex = testObject.openCurrentMatrixIndex
         for (i in 0 until end) {
@@ -71,7 +77,7 @@ class DrawerUnitTest {
     }
 
     @Test
-    fun restore_restoreMatrixAfterChange() {
+    fun `restore will restore changed matrix`() {
         val matrixIndex = testObject.openCurrentMatrixIndex
         val previousMatrix = testObject.openMatricesBuffer.copyOfRange(
                 testObject.openCurrentMatrixIndex, testObject.openCurrentMatrixIndex + MATRIX_SIZE)

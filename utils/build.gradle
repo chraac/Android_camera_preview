@@ -40,23 +40,13 @@ android {
     }
 
     testOptions {
-        unitTests.returnDefaultValues = true
+        unitTests.includeAndroidResources = true
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-
-    sourceSets {
-        String sharedTestDir = 'src/test/java'
-        test {
-            java.srcDir sharedTestDir
-        }
-        androidTest {
-            java.srcDir sharedTestDir
         }
     }
 }
@@ -71,17 +61,13 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
 
-    // EXIF Interface
-    implementation 'androidx.exifinterface:exifinterface:1.2.0'
-
     implementation project(':extSurfaceTexture')
 
     // Unit testing
-    testImplementation 'androidx.test.ext:junit:1.1.1'
-    testImplementation 'androidx.test:rules:1.2.0'
-    testImplementation 'androidx.test:runner:1.2.0'
-    testImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    testImplementation 'org.robolectric:robolectric:4.3.1'
+    testImplementation "junit:junit:4.12"
+    testImplementation "org.mockito:mockito-core:3.4.0"
+    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
+    testImplementation "org.robolectric:robolectric:4.3.1"
 
     // Instrumented testing
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'

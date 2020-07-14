@@ -24,18 +24,19 @@ class ExtSurfaceTexture constructor(
         height: Int,
         format: Int,
         maxImages: Int,
-        textureId: Int
+        textureId: Int,
+        private val glFunctions: GLFunctions,
+        private val eglFunctions: EGLFunctions = EGLFunctionsImpl,
+        private val imageReader: ImageReader =
+                ImageReader.newInstance(width, height, format, maxImages)
 ) : ImageReader.OnImageAvailableListener, SurfaceTextureProvider {
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    val imageReader: ImageReader = ImageReader.newInstance(width, height, format, maxImages)
-
-    @Suppress("MemberVisibilityCanBePrivate")
+    @Suppress("MemberVisibilityCanBePrivate", "MemberVisibilityCanBePrivate")
     val textureId
         get() = _glTextureId
 
     @GuardedBy("this")
-    var errorHandler: (Int) -> Unit? = {
+    var errorHandler: ((Int) -> Unit)? = {
         synchronized(this) {
             val errorString = GLU.gluErrorString(it) ?: "$it"
             throw RuntimeException("glGetError: $errorString")
@@ -98,12 +99,11 @@ class ExtSurfaceTexture constructor(
             val hardwareBuffer = image.hardwareBuffer
                     ?: throw IllegalStateException("Invalid HardwareBuffer")
             _hardwareBuffer = hardwareBuffer
-            _eglImageKHR = EGLFunctions.eglCreateImageFromHardwareBuffer(EGL_NO_DISPLAY, hardwareBuffer)
+            _eglImageKHR = eglFunctions.eglCreateImageFromHardwareBuffer(EGL_NO_DISPLAY, hardwareBuffer)
                     ?: throw IllegalStateException("Invalid EGLImage")
-            glActiveTexture(GL_TEXTURE0)
-            glBindTexture(TEXTURE_TARGET, textureId)
+            glFunctions.glBindTexture(TEXTURE_TARGET, textureId)
             checkGLError()
-            EGLFunctions.eglImageTargetTexture2DOES(TEXTURE_TARGET, _eglImageKHR)
+            eglFunctions.glEGLImageTargetTexture2DOES(TEXTURE_TARGET, _eglImageKHR)
             checkGLError()
         } catch (e: IllegalStateException) {
             /**
@@ -120,10 +120,10 @@ class ExtSurfaceTexture constructor(
     @WorkerThread
     override fun releaseTexImage() {
         check(_handler == null || Looper.myLooper() == _handler?.looper) { "Illegal release thread" }
-        glActiveTexture(GL_TEXTURE0)
-        glBindTexture(TEXTURE_TARGET, 0)
+        glFunctions.glActiveTexture(GL_TEXTURE0)
+        glFunctions.glBindTexture(TEXTURE_TARGET, 0)
         checkGLError()
-        EGLFunctions.eglDestroyImageKHR(EGL_NO_DISPLAY, _eglImageKHR)
+        eglFunctions.eglDestroyImageKHR(EGL_NO_DISPLAY, _eglImageKHR)
         _eglImageKHR = null
         _hardwareBuffer?.close()
         _hardwareBuffer = null
@@ -136,13 +136,13 @@ class ExtSurfaceTexture constructor(
     override fun attachToGLContext(texName: Int) {
         detachFromGLContext()
         checkGLError()
-        glActiveTexture(GL_TEXTURE0)
-        glBindTexture(TEXTURE_TARGET, textureId)
+        glFunctions.glActiveTexture(GL_TEXTURE0)
+        glFunctions.glBindTexture(TEXTURE_TARGET, textureId)
         checkGLError()
-        glTexParameteri(TEXTURE_TARGET, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(TEXTURE_TARGET, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-        glTexParameteri(TEXTURE_TARGET, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glTexParameteri(TEXTURE_TARGET, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glFunctions.glTexParameteri(TEXTURE_TARGET, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glFunctions.glTexParameteri(TEXTURE_TARGET, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glFunctions.glTexParameteri(TEXTURE_TARGET, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glFunctions.glTexParameteri(TEXTURE_TARGET, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         checkGLError()
         _glTextureId = texName
         val looper = Looper.myLooper()
@@ -154,7 +154,6 @@ class ExtSurfaceTexture constructor(
     override fun detachFromGLContext() {
         check(_handler == null || Looper.myLooper() == _handler?.looper) { "Illegal detach thread" }
         releaseTexImage()
-        glBindTexture(TEXTURE_TARGET, 0)
         _glTextureId = 0
     }
 
@@ -173,18 +172,9 @@ class ExtSurfaceTexture constructor(
         listener.onFrameAvailable(this)
     }
 
-    private fun runInHandlerThread(block: () -> Unit) = synchronized(this) {
-        val handler = _handler ?: return@synchronized
-        if (handler.looper == Looper.myLooper()) {
-            handler.post(block)
-        } else {
-            block.invoke()
-        }
-    }
-
     private fun checkGLError() = synchronized(this) {
         val handler = errorHandler ?: return@synchronized
-        val error = glGetError()
+        val error = glFunctions.glGetError()
         if (error != GL_NO_ERROR) {
             handler.invoke(error)
         }
