@@ -113,7 +113,7 @@ class ExtSurfaceTexture constructor(
              * {@link android.media.ImageReader#acquireNextImage}.
              */
             releaseTexImage()
-            return
+            throw e
         }
     }
 
