@@ -94,6 +94,12 @@ class ExtSurfaceTexture constructor(
         checkGLError()
         releaseTexImage()
         try {
+            /**
+             * This operation will fail by throwing an {@link java.lang.IllegalStateException} if
+             * {@code android.media.ImageReader.maxImages} have been acquired with
+             * {@link android.media.ImageReader#acquireLatestImage} or
+             * {@link android.media.ImageReader#acquireNextImage}.
+             */
             val image = imageReader.acquireLatestImage() ?: return
             _image = image
             val hardwareBuffer = image.hardwareBuffer
@@ -105,13 +111,7 @@ class ExtSurfaceTexture constructor(
             checkGLError()
             eglFunctions.glEGLImageTargetTexture2DOES(TEXTURE_TARGET, _eglImageKHR)
             checkGLError()
-        } catch (e: IllegalStateException) {
-            /**
-             * This operation will fail by throwing an {@link java.lang.IllegalStateException} if
-             * {@code android.media.ImageReader.maxImages} have been acquired with
-             * {@link android.media.ImageReader#acquireLatestImage} or
-             * {@link android.media.ImageReader#acquireNextImage}.
-             */
+        } catch (e: Throwable) {
             releaseTexImage()
             throw e
         }
