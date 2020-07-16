@@ -167,8 +167,11 @@ class ExtSurfaceTexture constructor(
     }
 
     @WorkerThread
-    override fun onImageAvailable(reader: ImageReader?) = synchronized(this) {
-        val listener = _surfaceTextureListener ?: return
+    override fun onImageAvailable(reader: ImageReader?) {
+        val listener = synchronized(this) {
+            _surfaceTextureListener ?: return
+        }
+
         listener.onFrameAvailable(this)
     }
 
