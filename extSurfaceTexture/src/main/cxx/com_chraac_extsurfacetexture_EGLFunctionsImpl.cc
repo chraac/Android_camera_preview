@@ -1,5 +1,5 @@
 
-#include "surface_texture_ext_jni.hh"
+#include "com_chraac_extsurfacetexture_EGLFunctionsImpl.hh"
 #include <android/hardware_buffer_jni.h>
 #include <android/log.h>
 

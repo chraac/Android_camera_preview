@@ -2,7 +2,7 @@
 #include <android/log.h>
 #include <jni.h>
 
-#include "surface_texture_ext_jni.hh"
+#include "com_chraac_extsurfacetexture_EGLFunctionsImpl.hh"
 
 using namespace hardware_buffer_ext;
 

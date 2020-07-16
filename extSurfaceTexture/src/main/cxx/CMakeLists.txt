@@ -36,8 +36,8 @@ set(hardware_buffer_ext_INCLUDES
 set(hardware_buffer_ext_SOURCES
     hardware_buffer_ext.cc
     hardware_buffer_ext.hh
-    surface_texture_ext_jni.cc
-    surface_texture_ext_jni.hh
+    com_chraac_extsurfacetexture_EGLFunctionsImpl.cc
+    com_chraac_extsurfacetexture_EGLFunctionsImpl.hh
     jni_load.cc
 )
 
