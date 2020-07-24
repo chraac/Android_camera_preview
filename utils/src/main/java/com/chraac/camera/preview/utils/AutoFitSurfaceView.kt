@@ -25,7 +25,7 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
-import com.chraac.extsurfacetexture.ExtSurfaceTexture
+import com.chraac.advsurfacetexture.AdvSurfaceTexture
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.android.asCoroutineDispatcher
@@ -113,7 +113,7 @@ class AutoFitSurfaceView @JvmOverloads constructor(
             var manager = surfaceTextureManager
             if (manager == null || manager.size != Size(width, height)) {
                 manager?.close()
-                val surfaceTexture = ExtSurfaceTexture(
+                val surfaceTexture = AdvSurfaceTexture(
                         width, height, YUV_420_888, 16, 0, GLES20Functions())
                 manager = SurfaceTextureManagerImpl(surfaceTexture)
                 manager.setFrameAvailableListener(

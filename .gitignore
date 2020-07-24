@@ -35,4 +35,5 @@ proguard-project.txt
 *.iml
 .idea
 .vscode
-extSurfaceTexture/.cxx
+advanced-surface-texture/.cxx
+*.log

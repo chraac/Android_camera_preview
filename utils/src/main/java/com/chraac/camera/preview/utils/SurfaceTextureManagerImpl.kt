@@ -7,7 +7,7 @@ import android.util.Size
 import android.view.Surface
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
-import com.chraac.extsurfacetexture.SurfaceTextureProvider
+import com.chraac.advsurfacetexture.SurfaceTextureProvider
 
 class SurfaceTextureManagerImpl(
         surfaceTexture: SurfaceTextureProvider

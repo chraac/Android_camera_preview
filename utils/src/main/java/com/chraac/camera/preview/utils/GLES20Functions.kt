@@ -1,7 +1,7 @@
 package com.chraac.camera.preview.utils
 
 import android.opengl.GLES20
-import com.chraac.extsurfacetexture.GLFunctions
+import com.chraac.advsurfacetexture.GLFunctions
 
 class GLES20Functions : GLFunctions {
 

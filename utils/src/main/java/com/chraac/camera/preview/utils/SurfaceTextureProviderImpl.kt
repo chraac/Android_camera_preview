@@ -4,7 +4,7 @@ import android.graphics.SurfaceTexture
 import android.os.Handler
 import android.util.Size
 import android.view.Surface
-import com.chraac.extsurfacetexture.SurfaceTextureProvider
+import com.chraac.advsurfacetexture.SurfaceTextureProvider
 
 
 class SurfaceTextureProviderImpl(
