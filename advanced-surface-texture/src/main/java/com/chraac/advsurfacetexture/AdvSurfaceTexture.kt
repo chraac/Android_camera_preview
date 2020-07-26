@@ -14,10 +14,13 @@ import android.view.Surface
 import androidx.annotation.GuardedBy
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
+import java.lang.UnsupportedOperationException
 
 private const val TEXTURE_TARGET = GL_TEXTURE_EXTERNAL_OES
 
 private val IS_ANDROID_9_OR_ABOVE = Build.VERSION.SDK_INT >= 29
+
+private val IS_ADV_SURFACE_TEXTURE_AVAILABLE = Build.VERSION.SDK_INT >= 26
 
 @TargetApi(26)
 class AdvSurfaceTexture internal constructor(
@@ -70,6 +73,10 @@ class AdvSurfaceTexture internal constructor(
     private val _imageReader: ImageReader = imageReader
 
     init {
+        if (!IS_ADV_SURFACE_TEXTURE_AVAILABLE) {
+            throw UnsupportedOperationException("AdvSurfaceTexture is unavailable in SDK_INT < 26")
+        }
+
         if (textureId > 0) {
             attachToGLContext(textureId)
         }
