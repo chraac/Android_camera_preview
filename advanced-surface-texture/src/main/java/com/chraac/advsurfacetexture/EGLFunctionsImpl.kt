@@ -4,7 +4,7 @@ import android.annotation.TargetApi
 import android.hardware.HardwareBuffer
 import android.opengl.EGLDisplay
 
-@TargetApi(28)
+@TargetApi(26)
 object EGLFunctionsImpl : EGLFunctions, NativeObject {
 
     override var native: Long = 0
