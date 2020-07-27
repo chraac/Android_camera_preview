@@ -9,20 +9,18 @@ import android.opengl.GLU
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.util.Size
 import android.view.Surface
 import androidx.annotation.GuardedBy
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
-import java.lang.UnsupportedOperationException
 
 private const val TEXTURE_TARGET = GL_TEXTURE_EXTERNAL_OES
 
-private val IS_ANDROID_9_OR_ABOVE = Build.VERSION.SDK_INT >= 29
+private val IS_ANDROID_9_OR_ABOVE = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
 
-private val IS_ADV_SURFACE_TEXTURE_AVAILABLE = Build.VERSION.SDK_INT >= 26
+val IS_ADV_SURFACE_TEXTURE_AVAILABLE = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
 
-@TargetApi(26)
+@TargetApi(Build.VERSION_CODES.O)
 class AdvSurfaceTexture internal constructor(
         textureId: Int,
         glFunctions: GLFunctions,
@@ -49,8 +47,11 @@ class AdvSurfaceTexture internal constructor(
         _imageReader.surface
     }
 
-    override val size: Size
-        get() = Size(_imageReader.width, _imageReader.height)
+    override val width: Int
+        get() = _imageReader.width
+
+    override val height: Int
+        get() = _imageReader.height
 
     private var _image: ImageReader.Image? = null
 

@@ -11,6 +11,7 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.spy
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.lang.UnsupportedOperationException
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.P], manifest = Config.NONE)
@@ -35,6 +36,29 @@ class AdvSurfaceTextureUnitTest {
         doReturn(hardwareBuffer).`when`(image).hardwareBuffer
         doReturn(eglImage).`when`(eglFunctions)
                 .eglCreateImageFromHardwareBuffer(anyOrNull(), eq(hardwareBuffer))
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.N_MR1])
+    fun `constructor will throw exception when SDK_INT less than 26`() {
+        var isExceptionThrown = false
+        var isExceptionThrowInConstructor = true
+        try {
+            val surfaceTexture = AdvSurfaceTexture(
+                    textureId = 0,
+                    glFunctions = glFunctions,
+                    eglFunctions = eglFunctions,
+                    imageReader = imageReader
+            )
+
+            isExceptionThrowInConstructor = false
+            surfaceTexture.updateTexImage()
+        } catch (e: UnsupportedOperationException) {
+            isExceptionThrown = true
+        }
+
+        assertEquals(true, isExceptionThrown)
+        assertEquals(true, isExceptionThrowInConstructor)
     }
 
     @Test

@@ -22,8 +22,11 @@ class SurfaceTextureManagerImpl(
     override val textureId: Int
         get() = _textureId[0]
 
-    override val size: Size
-        get() = _surfaceTexture.size
+    override val width: Int
+        get() = _surfaceTexture.width
+
+    override val height: Int
+        get() = _surfaceTexture.height
 
     private val _surfaceTexture = surfaceTexture
 
