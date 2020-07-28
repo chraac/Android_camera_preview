@@ -6,6 +6,7 @@ import android.opengl.EGL14.EGL_NO_DISPLAY
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.opengl.GLES20.*
 import android.opengl.GLU
+import android.opengl.Matrix
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -110,6 +111,12 @@ class AdvSurfaceTexture internal constructor(
         synchronized(this) {
             _surfaceTextureListener = listener
         }
+    }
+
+    @WorkerThread
+    override fun getTransformMatrix(mtx: FloatArray) {
+        // TODO: Use rotation and crop in surface
+        Matrix.setIdentityM(mtx, 0)
     }
 
     @WorkerThread

@@ -71,6 +71,8 @@ class SystemSurfaceTexture(
         }
     }
 
+    override fun getTransformMatrix(mtx: FloatArray) = _surfaceTexture.getTransformMatrix(mtx)
+
     override fun attachToGLContext(texName: Int) = _surfaceTexture.attachToGLContext(texName)
 
     override fun updateTexImage() = _surfaceTexture.updateTexImage()
