@@ -2,6 +2,7 @@ package com.chraac.advsurfacetexture
 
 import android.os.Handler
 import android.view.Surface
+import androidx.annotation.IntRange
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
 
@@ -16,8 +17,10 @@ interface SurfaceTextureProvider : AutoCloseable {
 
     val surface: Surface
 
+    @get:IntRange(from = 1)
     val width: Int
 
+    @get:IntRange(from = 1)
     val height: Int
 
     @MainThread

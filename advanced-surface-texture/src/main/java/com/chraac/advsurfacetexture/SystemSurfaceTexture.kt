@@ -25,6 +25,8 @@ class SystemSurfaceTexture(
     }
 
     private val _surfaceTexture = SurfaceTexture(0).apply {
+        check(width > 0) { "Invalid width" }
+        check(height > 0) { "Invalid height" }
         // detach SurfaceTexture form current thread cause we will draw in render thread later
         detachFromGLContext()
         setDefaultBufferSize(width, height)

@@ -48,7 +48,9 @@ class AdvSurfaceTextureUnitTest {
                     textureId = 0,
                     glFunctions = glFunctions,
                     eglFunctions = eglFunctions,
-                    imageReader = imageReader
+                    imageReaderProvider = {
+                        imageReader
+                    }
             )
 
             isExceptionThrowInConstructor = false
@@ -198,7 +200,9 @@ class AdvSurfaceTextureUnitTest {
                 textureId = 0,
                 glFunctions = glFunctions,
                 eglFunctions = eglFunctions,
-                imageReader = imageReader
+                imageReaderProvider = {
+                    imageReader
+                }
         )))
     }
 }

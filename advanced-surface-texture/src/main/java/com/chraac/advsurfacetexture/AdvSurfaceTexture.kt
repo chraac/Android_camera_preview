@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Surface
 import androidx.annotation.GuardedBy
+import androidx.annotation.IntRange
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
 
@@ -26,7 +27,7 @@ class AdvSurfaceTexture internal constructor(
         textureId: Int,
         glFunctions: GLFunctions,
         eglFunctions: EGLFunctions,
-        imageReader: ImageReader
+        imageReaderProvider: () -> ImageReader
 ) : ImageReader.OnImageAvailableListener, SurfaceTextureProvider {
 
     @Suppress("MemberVisibilityCanBePrivate", "MemberVisibilityCanBePrivate")
@@ -72,7 +73,13 @@ class AdvSurfaceTexture internal constructor(
 
     private val _eglFunctions: EGLFunctions = eglFunctions
 
-    private val _imageReader: ImageReader = imageReader
+    private val _imageReader: ImageReader by lazy {
+        imageReaderProvider.invoke()
+    }
+
+    private val _transformMatrix = FloatArray(16).apply {
+        Matrix.setIdentityM(this, 0)
+    }
 
     init {
         if (!IS_ADV_SURFACE_TEXTURE_AVAILABLE) {
@@ -84,8 +91,8 @@ class AdvSurfaceTexture internal constructor(
         }
     }
 
-    constructor(width: Int,
-                height: Int,
+    constructor(@IntRange(from = 1) width: Int,
+                @IntRange(from = 1) height: Int,
                 format: Int,
                 maxImages: Int,
                 textureId: Int,
@@ -93,10 +100,14 @@ class AdvSurfaceTexture internal constructor(
             this(textureId = textureId,
                     glFunctions = glFunctions,
                     eglFunctions = EGLFunctionsImpl,
-                    imageReader = if (IS_ANDROID_9_OR_ABOVE) {
-                        SystemImageReader(width, height, format, maxImages)
-                    } else {
-                        NativeImageReader(width, height, format, maxImages)
+                    imageReaderProvider = {
+                        check(width > 0) { "Invalid width" }
+                        check(height > 0) { "Invalid height" }
+                        if (IS_ANDROID_9_OR_ABOVE) {
+                            SystemImageReader(width, height, format, maxImages)
+                        } else {
+                            NativeImageReader(width, height, format, maxImages)
+                        }
                     })
 
     @MainThread
@@ -115,8 +126,7 @@ class AdvSurfaceTexture internal constructor(
 
     @WorkerThread
     override fun getTransformMatrix(mtx: FloatArray) {
-        // TODO: Use rotation and crop in surface
-        Matrix.setIdentityM(mtx, 0)
+        _transformMatrix.copyInto(mtx)
     }
 
     @WorkerThread
