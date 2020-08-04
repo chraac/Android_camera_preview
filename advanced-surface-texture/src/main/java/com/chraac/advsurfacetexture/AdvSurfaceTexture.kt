@@ -11,10 +11,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.Surface
-import androidx.annotation.GuardedBy
+import androidx.annotation.*
 import androidx.annotation.IntRange
-import androidx.annotation.MainThread
-import androidx.annotation.WorkerThread
 
 private const val TEXTURE_TARGET = GL_TEXTURE_EXTERNAL_OES
 
@@ -125,7 +123,8 @@ class AdvSurfaceTexture internal constructor(
     }
 
     @WorkerThread
-    override fun getTransformMatrix(mtx: FloatArray) {
+    override fun getTransformMatrix(@Size(value = 16) mtx: FloatArray) {
+        check(mtx.size != 16) { "Invalid matrix size" }
         _transformMatrix.copyInto(mtx)
     }
 

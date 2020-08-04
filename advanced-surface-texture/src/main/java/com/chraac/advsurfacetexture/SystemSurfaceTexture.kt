@@ -7,6 +7,7 @@ import android.os.Looper
 import android.view.Surface
 import androidx.annotation.GuardedBy
 import androidx.annotation.RequiresApi
+import androidx.annotation.Size
 
 private val IS_CALLBACK_WITH_HANDLER_AVAILABLE =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
@@ -73,7 +74,8 @@ class SystemSurfaceTexture(
         }
     }
 
-    override fun getTransformMatrix(mtx: FloatArray) = _surfaceTexture.getTransformMatrix(mtx)
+    override fun getTransformMatrix(@Size(value = 16) mtx: FloatArray) =
+            _surfaceTexture.getTransformMatrix(mtx)
 
     override fun attachToGLContext(texName: Int) = _surfaceTexture.attachToGLContext(texName)
 

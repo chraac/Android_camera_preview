@@ -4,6 +4,7 @@ import android.os.Handler
 import android.view.Surface
 import androidx.annotation.IntRange
 import androidx.annotation.MainThread
+import androidx.annotation.Size
 import androidx.annotation.WorkerThread
 
 interface SurfaceTextureProvider : AutoCloseable {
@@ -27,7 +28,7 @@ interface SurfaceTextureProvider : AutoCloseable {
     fun setOnFrameAvailableListener(listener: OnFrameAvailableListener?, handler: Handler?)
 
     @WorkerThread
-    fun getTransformMatrix(mtx: FloatArray)
+    fun getTransformMatrix(@Size(value = 16) mtx: FloatArray)
 
     @WorkerThread
     fun attachToGLContext(texName: Int)
