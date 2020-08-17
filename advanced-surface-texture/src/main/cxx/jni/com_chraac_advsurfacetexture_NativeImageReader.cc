@@ -40,6 +40,32 @@ jobject JNINativeImage_getHardwareBuffer(JNIEnv *env, jobject, jlong native) {
 
 /*
  * Class:     com_chraac_advsurfacetexture_NativeImageReader_NativeImage
+ * Method:    nativeGetCropRect
+ * Signature: (J)[I
+ */
+jintArray JNINativeImage_getCropRect(JNIEnv *env, jobject, jlong native) {
+  auto *image = reinterpret_cast<AImage *>(native);
+  if (!image) {
+    return nullptr;
+  }
+
+  AImageCropRect crop_rect = {};
+  auto status = AImage_getCropRect(image, &crop_rect);
+  if (status != AMEDIA_OK) {
+    __android_log_print(ANDROID_LOG_ERROR, kLogTag,
+                        "Get AImageCropRect failed: %d.", int(status));
+    return nullptr;
+  }
+
+  jintArray rect = env->NewIntArray(4);
+  jint buffer[] = {crop_rect.left, crop_rect.top, crop_rect.right,
+                   crop_rect.bottom};
+  env->SetIntArrayRegion(rect, 0, 4, buffer);
+  return rect;
+}
+
+/*
+ * Class:     com_chraac_advsurfacetexture_NativeImageReader_NativeImage
  * Method:    nativeClose
  * Signature: (J)V
  */
@@ -54,6 +80,7 @@ void JNINativeImage_close(JNIEnv *env, jobject object, jlong native) {
 const JNINativeMethod g_native_image_methods[] = {
     {"nativeGetHardwareBuffer", "(J)Landroid/hardware/HardwareBuffer;",
      (void *)JNINativeImage_getHardwareBuffer},
+    {"nativeGetCropRect", "(J)[I", (void *)JNINativeImage_getCropRect},
     {"nativeClose", "(J)V", (void *)JNINativeImage_close},
 };
 
@@ -74,9 +101,11 @@ public:
   }
 
   AImageReader *image_reader() const { return image_reader_; }
+
   jobject image_reader_object() const { return image_reader_object_.get(); }
 
   JNINativeImageReaderContext(const JNINativeImageReaderContext &) = delete;
+
   void operator=(const JNINativeImageReaderContext &) = delete;
 
 private:

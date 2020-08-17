@@ -1,6 +1,7 @@
 package com.chraac.advsurfacetexture
 
 import android.annotation.TargetApi
+import android.graphics.Rect
 import android.hardware.HardwareBuffer
 import android.os.Handler
 import android.os.Looper
@@ -27,9 +28,16 @@ class NativeImageReader(
         override val hardwareBuffer: HardwareBuffer?
             get() = nativeGetHardwareBuffer(native)
 
+        override val cropRect: Rect by lazy {
+            val cropRect = nativeGetCropRect(native)
+            check(cropRect.size == 4) { "Invalid crop rect" }
+            Rect(cropRect[0], cropRect[1], cropRect[2], cropRect[3])
+        }
+
         override fun close() = nativeClose(native)
 
         private external fun nativeGetHardwareBuffer(native: Long): HardwareBuffer?
+        private external fun nativeGetCropRect(native: Long): IntArray
         private external fun nativeClose(native: Long)
     }
 

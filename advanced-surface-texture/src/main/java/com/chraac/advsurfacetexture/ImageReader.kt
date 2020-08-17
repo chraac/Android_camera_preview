@@ -1,5 +1,6 @@
 package com.chraac.advsurfacetexture
 
+import android.graphics.Rect
 import android.hardware.HardwareBuffer
 import android.os.Handler
 import android.view.Surface
@@ -16,6 +17,8 @@ interface ImageReader : AutoCloseable {
         val timestamp: Long
 
         val hardwareBuffer: HardwareBuffer?
+
+        val cropRect: Rect
     }
 
     interface OnImageAvailableListener {

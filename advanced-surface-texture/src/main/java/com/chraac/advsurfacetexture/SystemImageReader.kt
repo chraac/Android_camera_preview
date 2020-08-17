@@ -1,6 +1,7 @@
 package com.chraac.advsurfacetexture
 
 import android.annotation.TargetApi
+import android.graphics.Rect
 import android.hardware.HardwareBuffer
 import android.media.Image
 import android.os.Handler
@@ -32,6 +33,9 @@ class SystemImageReader constructor(
 
         override val hardwareBuffer: HardwareBuffer?
             get() = _image.hardwareBuffer
+
+        override val cropRect: Rect
+            get() = _image.cropRect
 
         override fun close() = _image.close()
     }
