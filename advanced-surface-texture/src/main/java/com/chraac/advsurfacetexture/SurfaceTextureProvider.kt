@@ -2,16 +2,24 @@ package com.chraac.advsurfacetexture
 
 import android.os.Handler
 import android.view.Surface
+import androidx.annotation.*
 import androidx.annotation.IntRange
-import androidx.annotation.MainThread
-import androidx.annotation.Size
-import androidx.annotation.WorkerThread
 
 interface SurfaceTextureProvider : AutoCloseable {
+
+    @IntDef(value = [
+        Surface.ROTATION_0, Surface.ROTATION_90, Surface.ROTATION_180, Surface.ROTATION_270])
+    annotation class Rotation
 
     interface OnFrameAvailableListener {
         @WorkerThread
         fun onFrameAvailable(surfaceTexture: SurfaceTextureProvider)
+    }
+
+    interface SurfaceRotationProvider {
+        @Rotation
+        @WorkerThread
+        fun getSurfaceRotationFromImage(imageReader: ImageReader, image: ImageReader.Image): Int
     }
 
     val timestamp: Long
@@ -26,6 +34,9 @@ interface SurfaceTextureProvider : AutoCloseable {
 
     @MainThread
     fun setOnFrameAvailableListener(listener: OnFrameAvailableListener?, handler: Handler?)
+
+    @MainThread
+    fun setSurfaceRotationProvider(rotationProvider: SurfaceRotationProvider?)
 
     @WorkerThread
     fun getTransformMatrix(@Size(value = 16) mtx: FloatArray)

@@ -1,6 +1,8 @@
 package com.chraac.advsurfacetexture
 
 import android.annotation.TargetApi
+import android.graphics.ImageFormat
+import android.graphics.Rect
 import android.hardware.HardwareBuffer
 import android.opengl.EGL14.EGL_NO_DISPLAY
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
@@ -15,6 +17,20 @@ import androidx.annotation.*
 import androidx.annotation.IntRange
 
 private const val TEXTURE_TARGET = GL_TEXTURE_EXTERNAL_OES
+
+private val MATRIX_FLIP_HORIZONTAL =
+        floatArrayOf(-1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f, 1f, 0f, 0f, 1f)
+private val MATRIX_FLIP_VERTICAL =
+        floatArrayOf(1f, 0f, 0f, 0f, 0f, -1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 1f, 0f, 1f)
+private val MATRIX_FLIP_BOTH = FloatArray(16).apply {
+    Matrix.multiplyMM(this, 0,
+            MATRIX_FLIP_HORIZONTAL, 0,
+            MATRIX_FLIP_VERTICAL, 0)
+}
+private val MATRIX_ROTATE_90 =
+        floatArrayOf(0f, 1f, 0f, 0f, -1f, 0f, 0f, 0f, 0f, 0f, 1f, 0f, 1f, 0f, 0f, 1f)
+private val MATRIX_CROP_DEFAULT =
+        floatArrayOf(1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 0f)
 
 private val IS_ANDROID_9_OR_ABOVE = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
 
@@ -67,6 +83,9 @@ class AdvSurfaceTexture internal constructor(
     @GuardedBy("this")
     private var _surfaceTextureListener: SurfaceTextureProvider.OnFrameAvailableListener? = null
 
+    @GuardedBy("this")
+    private var _surfaceRotationProvider: SurfaceTextureProvider.SurfaceRotationProvider? = null
+
     private val _glFunctions: GLFunctions = glFunctions
 
     private val _eglFunctions: EGLFunctions = eglFunctions
@@ -75,9 +94,15 @@ class AdvSurfaceTexture internal constructor(
         imageReaderProvider.invoke()
     }
 
+    @SurfaceTextureProvider.Rotation
+    private var _lastRotation = Surface.ROTATION_0
+    private var _lastCropRect = Rect()
+
     private val _transformMatrix = FloatArray(16).apply {
         Matrix.setIdentityM(this, 0)
     }
+
+    private val _matrixBuffer = FloatArray(32)
 
     init {
         if (!IS_ADV_SURFACE_TEXTURE_AVAILABLE) {
@@ -122,6 +147,13 @@ class AdvSurfaceTexture internal constructor(
         }
     }
 
+    @MainThread
+    override fun setSurfaceRotationProvider(
+            rotationProvider: SurfaceTextureProvider.SurfaceRotationProvider?) =
+            synchronized(this) {
+                _surfaceRotationProvider = rotationProvider
+            }
+
     @WorkerThread
     override fun getTransformMatrix(@Size(value = 16) mtx: FloatArray) {
         check(mtx.size != 16) { "Invalid matrix size" }
@@ -143,6 +175,14 @@ class AdvSurfaceTexture internal constructor(
              */
             val image = _imageReader.acquireLatestImage() ?: return
             _image = image
+            val currentRotation = synchronized(this) { _surfaceRotationProvider }
+                    ?.getSurfaceRotationFromImage(_imageReader, image) ?: Surface.ROTATION_0
+            if (_lastRotation != currentRotation || _lastCropRect != image.cropRect) {
+                refreshTransformMatrix(currentRotation, image)
+                _lastRotation = currentRotation
+                _lastCropRect = image.cropRect
+            }
+
             val hardwareBuffer = image.hardwareBuffer
                     ?: throw IllegalStateException("Invalid HardwareBuffer")
             _hardwareBuffer = hardwareBuffer
@@ -224,4 +264,82 @@ class AdvSurfaceTexture internal constructor(
         }
     }
 
+    /*
+     * Calculate the transform matrix by rotation and cropRect
+     * Note that the formula to calculate the transform matrix is:
+     *   FLIP_VERTICAL * CROP * FLIP_HORIZONTAL * FLIP_VERTICAL * ROTATE_90
+     * See also:
+     * https://cs.android.com/android/platform/superproject/+/master:frameworks/base/libs/hwui/surfacetexture/SurfaceTexture.cpp;l=287;drc=master;bpv=0;bpt=1
+     */
+    private fun refreshTransformMatrix(rotation: Int, image: ImageReader.Image) {
+        val indexOffset = 16
+
+        image.takeUnless { image.cropRect.isEmpty }?.apply {
+            val shrinkAmount = when (format) {
+                ImageFormat.FLEX_RGB_888,
+                ImageFormat.FLEX_RGBA_8888,
+                ImageFormat.RGB_565 -> 0.5f
+                else -> 1f
+            }
+
+            MATRIX_CROP_DEFAULT.copyInto(_matrixBuffer, indexOffset)
+            if (cropRect.width() < width) {
+                // translate of X axis
+                _matrixBuffer[12 + indexOffset] =
+                        (cropRect.left.toFloat() + shrinkAmount) / width.toFloat()
+                // scale of X axis
+                _matrixBuffer[0 + indexOffset] =
+                        (cropRect.width().toFloat() - 2f * shrinkAmount) / width.toFloat()
+            }
+
+            if (cropRect.height() < height) {
+                // translate of Y axis
+                _matrixBuffer[13 + indexOffset] = (height.toFloat() -
+                        cropRect.bottom.toFloat() + shrinkAmount) / height.toFloat()
+                // scale of Y axis
+                _matrixBuffer[5 + indexOffset] =
+                        (cropRect.height().toFloat() - 2f * shrinkAmount) / height.toFloat()
+            }
+
+            Matrix.multiplyMM(_matrixBuffer, 0,
+                    MATRIX_FLIP_VERTICAL, 0,
+                    _matrixBuffer, indexOffset)
+        } ?: run {
+            /*
+             * SurfaceFlinger expects the top of its window textures to be at a Y
+             * coordinate of 0, so SurfaceTexture must behave the same way.  We don't
+             * want to expose this to applications, however, so we must add an
+             * additional vertical flip to the transform after all the other transforms.
+             */
+            MATRIX_FLIP_VERTICAL.copyInto(_matrixBuffer, 0)
+        }
+
+        when (rotation) {
+            Surface.ROTATION_0 -> {
+                _matrixBuffer.copyInto(
+                        _transformMatrix, 0, 0, indexOffset)
+            }
+            Surface.ROTATION_90 -> {
+                Matrix.multiplyMM(_transformMatrix, 0,
+                        _matrixBuffer, 0,
+                        MATRIX_ROTATE_90, 0)
+            }
+            Surface.ROTATION_180 -> {
+                Matrix.multiplyMM(_transformMatrix, 0,
+                        _matrixBuffer, 0,
+                        MATRIX_FLIP_BOTH, 0)
+            }
+            Surface.ROTATION_270 -> {
+                Matrix.multiplyMM(_matrixBuffer, indexOffset,
+                        MATRIX_FLIP_BOTH, 0,
+                        MATRIX_ROTATE_90, 0)
+                Matrix.multiplyMM(_transformMatrix, 0,
+                        _matrixBuffer, 0,
+                        _matrixBuffer, indexOffset)
+            }
+            else -> {
+                throw IllegalStateException("Invalid rotation parameter: $rotation")
+            }
+        }
+    }
 }

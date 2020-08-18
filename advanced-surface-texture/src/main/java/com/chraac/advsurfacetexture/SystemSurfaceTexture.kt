@@ -74,6 +74,11 @@ class SystemSurfaceTexture(
         }
     }
 
+    override fun setSurfaceRotationProvider(
+            rotationProvider: SurfaceTextureProvider.SurfaceRotationProvider?) {
+        // Leave it unimplemented
+    }
+
     override fun getTransformMatrix(@Size(value = 16) mtx: FloatArray) =
             _surfaceTexture.getTransformMatrix(mtx)
 

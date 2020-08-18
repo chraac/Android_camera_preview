@@ -1,5 +1,6 @@
 package com.chraac.advsurfacetexture
 
+import android.graphics.Rect
 import android.hardware.HardwareBuffer
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.os.Build
@@ -11,7 +12,6 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.spy
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.lang.UnsupportedOperationException
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.P], manifest = Config.NONE)
@@ -31,10 +31,11 @@ class AdvSurfaceTextureUnitTest {
 
     @Before
     fun setup() {
-        doReturn(image).`when`(imageReader).acquireLatestImage()
-        doReturn(image).`when`(imageReader).acquireNextImage()
-        doReturn(hardwareBuffer).`when`(image).hardwareBuffer
-        doReturn(eglImage).`when`(eglFunctions)
+        doReturn(image).whenever(imageReader).acquireLatestImage()
+        doReturn(image).whenever(imageReader).acquireNextImage()
+        doReturn(Rect()).whenever(image).cropRect
+        doReturn(hardwareBuffer).whenever(image).hardwareBuffer
+        doReturn(eglImage).whenever(eglFunctions)
                 .eglCreateImageFromHardwareBuffer(anyOrNull(), eq(hardwareBuffer))
     }
 
@@ -169,7 +170,7 @@ class AdvSurfaceTextureUnitTest {
     }
 
     @Test
-    fun `releaseTexImage will release resources except ImageReader`() = runWithNewObject { subject ->
+    fun `releaseTexImage will release other resources except ImageReader`() = runWithNewObject { subject ->
         subject.attachToGLContext(1)
         subject.updateTexImage()
         clearInvocations(glFunctions)
