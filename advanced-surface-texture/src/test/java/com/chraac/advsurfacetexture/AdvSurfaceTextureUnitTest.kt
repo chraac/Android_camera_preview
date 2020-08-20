@@ -1,9 +1,11 @@
 package com.chraac.advsurfacetexture
 
+import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.hardware.HardwareBuffer
 import android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES
 import android.os.Build
+import android.view.Surface
 import com.nhaarman.mockitokotlin2.*
 import junit.framework.TestCase.assertEquals
 import org.junit.Before
@@ -21,20 +23,28 @@ class AdvSurfaceTextureUnitTest {
 
     private val eglFunctions = mock<EGLFunctions>()
 
-    private val imageReader = mock<ImageReader>()
-
-    private val image = mock<ImageReader.Image>()
-
     private val hardwareBuffer = mock<HardwareBuffer>()
+
+    private val image = mock<ImageReader.Image>().let {
+        doReturn(Rect()).whenever(it).cropRect
+        doReturn(hardwareBuffer).whenever(it).hardwareBuffer
+        doReturn(1280).whenever(it).width
+        doReturn(720).whenever(it).height
+        doReturn(ImageFormat.YUV_420_888).whenever(it).format
+        it
+    }
+
+    private val imageReader = mock<ImageReader>().apply {
+        doReturn(image).whenever(this).acquireLatestImage()
+        doReturn(image).whenever(this).acquireNextImage()
+    }
 
     private val eglImage = mock<EGLImageKHR>()
 
+    private val rotationProvider = mock<SurfaceTextureProvider.SurfaceRotationProvider>()
+
     @Before
     fun setup() {
-        doReturn(image).whenever(imageReader).acquireLatestImage()
-        doReturn(image).whenever(imageReader).acquireNextImage()
-        doReturn(Rect()).whenever(image).cropRect
-        doReturn(hardwareBuffer).whenever(image).hardwareBuffer
         doReturn(eglImage).whenever(eglFunctions)
                 .eglCreateImageFromHardwareBuffer(anyOrNull(), eq(hardwareBuffer))
     }
@@ -195,6 +205,19 @@ class AdvSurfaceTextureUnitTest {
         verify(image, times(1)).close()
         verify(imageReader, times(1)).close()
     }
+
+    @Test
+    fun `updateTexImage will not calculate crop matrix when crop rect is empty`() =
+            runWithNewObject { subject ->
+                subject.attachToGLContext(1)
+                doReturn(Surface.ROTATION_270).whenever(rotationProvider)
+                        .getSurfaceRotationFromImage(eq(imageReader), eq(image))
+                subject.setSurfaceRotationProvider(rotationProvider)
+                subject.updateTexImage()
+                verify(image, never()).format
+                verify(image, never()).width
+                verify(image, never()).height
+            }
 
     private fun runWithNewObject(block: (AdvSurfaceTexture) -> Unit) {
         block.invoke(spy(AdvSurfaceTexture(

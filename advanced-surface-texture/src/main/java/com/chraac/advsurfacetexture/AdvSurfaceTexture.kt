@@ -176,7 +176,7 @@ class AdvSurfaceTexture internal constructor(
             val image = _imageReader.acquireLatestImage() ?: return
             _image = image
             val currentRotation = synchronized(this) { _surfaceRotationProvider }
-                    ?.getSurfaceRotationFromImage(_imageReader, image) ?: Surface.ROTATION_0
+                    ?.getSurfaceRotationFromImage(_imageReader, image) ?: _lastRotation
             if (_lastRotation != currentRotation || _lastCropRect != image.cropRect) {
                 refreshTransformMatrix(currentRotation, image)
                 _lastRotation = currentRotation
