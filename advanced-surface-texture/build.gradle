@@ -6,7 +6,7 @@ android {
     compileSdkVersion 29
 
     defaultConfig {
-        minSdkVersion 26
+        minSdkVersion 19
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
@@ -18,14 +18,16 @@ android {
                 arguments "-DANDROID_ARM_NEON=TRUE",
                         "-DANDROID_TOOLCHAIN=clang",
                         "-DANDROID_STL=c++_static",
-                        "-DANDROID_PLATFORM=android-$minSdkVersion.apiLevel"
+                        // We use the ndk android-26 tool chain to use newer APIs.
+                        // And the so will failed to load in lower android version.
+                        "-DANDROID_PLATFORM=android-26"
             }
         }
     }
 
     buildTypes {
         debug {
-            packagingOptions{
+            packagingOptions {
                 doNotStrip "*/*/*.so"
             }
         }

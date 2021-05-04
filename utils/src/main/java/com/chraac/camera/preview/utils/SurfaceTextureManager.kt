@@ -16,7 +16,8 @@ interface SurfaceTextureManager : AutoCloseable {
     val target: Int
     val surface: Surface
     val textureId: Int
-    val size: Size
+    val width: Int
+    val height: Int
 
     @MainThread
     fun setFrameAvailableListener(listener: FrameAvailableListener?, handler: Handler?)

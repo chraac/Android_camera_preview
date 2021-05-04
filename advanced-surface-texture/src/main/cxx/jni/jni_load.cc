@@ -2,9 +2,7 @@
 #include <android/log.h>
 #include <jni.h>
 
-#include "com_chraac_advsurfacetexture_EGLFunctionsImpl.hh"
-#include "com_chraac_advsurfacetexture_NativeImageReader.hh"
-#include "com_chraac_advsurfacetexture_NativeObject.hh"
+#include "com_chraac_advsurfacetexture_SurfaceExt.hh"
 
 using namespace adv_surface_texture;
 
@@ -23,10 +21,8 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *jvm, void * /*reserved*/) {
     return JNI_EVERSION;
   }
 
-  const bool success = JNINativeObject::GetInstance().Load(jvm, env) &&
-                       JNINativeImage::GetInstance().Load(jvm, env) &&
-                       JNIAdvSurfaceTexture::GetInstance().Load(jvm, env);
-  return success ? JNI_VERSION_1_6 : JNI_EVERSION;
+  return JNISurfaceExt::GetInstance().Load(jvm, env) ? JNI_VERSION_1_6
+                                                     : JNI_EVERSION;
 }
 
 /* Library unload */
@@ -41,7 +37,5 @@ extern "C" JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *jvm,
     return;
   }
 
-  JNIAdvSurfaceTexture::GetInstance().Unload(env);
-  JNINativeImage::GetInstance().Unload(env);
-  JNINativeObject::GetInstance().Unload(env);
+  JNISurfaceExt::GetInstance().Unload(env);
 }

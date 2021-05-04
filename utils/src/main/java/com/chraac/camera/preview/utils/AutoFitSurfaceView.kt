@@ -17,15 +17,16 @@
 package com.chraac.camera.preview.utils
 
 import android.content.Context
-import android.graphics.ImageFormat.*
+import android.graphics.ImageFormat.YUV_420_888
 import android.util.AttributeSet
-import android.util.Size
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.annotation.MainThread
 import androidx.annotation.WorkerThread
-import com.chraac.advsurfacetexture.AdvSurfaceTexture
+import com.chraac.advsurfacetexture.AdvSurfaceTextureEx
+import com.chraac.advsurfacetexture.IS_ADV_SURFACE_TEXTURE_AVAILABLE
+import com.chraac.advsurfacetexture.SystemSurfaceTexture
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.android.asCoroutineDispatcher
@@ -37,12 +38,12 @@ import java.util.concurrent.atomic.AtomicInteger
  * performs center-crop transformation of input frames.
  */
 class AutoFitSurfaceView @JvmOverloads constructor(
-        context: Context,
-        attrs: AttributeSet? = null,
-        defStyle: Int = 0
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyle: Int = 0
 ) : SurfaceView(context, attrs, defStyle),
-        BufferQueueProducer,
-        SurfaceTextureManager.FrameAvailableListener {
+    BufferQueueProducer,
+    SurfaceTextureManager.FrameAvailableListener {
 
     override var surfaceCallback: SurfaceHolder.Callback?
         get() = outerSurfaceCallback
@@ -111,13 +112,17 @@ class AutoFitSurfaceView @JvmOverloads constructor(
         val glThread = glThread ?: throw IllegalStateException("glThread is null")
         return mainScope.async(glThread.handler.asCoroutineDispatcher()) {
             var manager = surfaceTextureManager
-            if (manager == null || manager.size != Size(width, height)) {
+            if (manager == null || manager.width != width || manager.height != height) {
                 manager?.close()
-                val surfaceTexture = AdvSurfaceTexture(
-                        width, height, YUV_420_888, 16, 0, GLES20Functions())
+                val surfaceTexture = if (IS_ADV_SURFACE_TEXTURE_AVAILABLE) {
+                    AdvSurfaceTextureEx(width, height, YUV_420_888, 16, 0)
+                } else {
+                    SystemSurfaceTexture(width, height)
+                }
+
                 manager = SurfaceTextureManagerImpl(surfaceTexture)
                 manager.setFrameAvailableListener(
-                        this@AutoFitSurfaceView, glThread.handler)
+                    this@AutoFitSurfaceView, glThread.handler)
                 surfaceTextureManager = manager
             }
 

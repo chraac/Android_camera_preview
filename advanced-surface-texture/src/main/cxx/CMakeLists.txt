@@ -35,14 +35,8 @@ set(adv_surface_texture_INCLUDES
         )
 
 set(adv_surface_texture_SOURCES
-        hardware_buffer_ext.cc
-        hardware_buffer_ext.hh
-        jni/com_chraac_advsurfacetexture_EGLFunctionsImpl.cc
-        jni/com_chraac_advsurfacetexture_EGLFunctionsImpl.hh
-        jni/com_chraac_advsurfacetexture_NativeImageReader.cc
-        jni/com_chraac_advsurfacetexture_NativeImageReader.hh
-        jni/com_chraac_advsurfacetexture_NativeObject.cc
-        jni/com_chraac_advsurfacetexture_NativeObject.hh
+        jni/com_chraac_advsurfacetexture_SurfaceExt.cc
+        jni/com_chraac_advsurfacetexture_SurfaceExt.hh
         jni/jni_load.cc
         jni/jni_helper.hh
         )

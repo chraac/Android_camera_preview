@@ -1,10 +1,9 @@
 package com.chraac.advsurfacetexture
 
 import android.os.Handler
-import android.util.Size
 import android.view.Surface
-import androidx.annotation.MainThread
-import androidx.annotation.WorkerThread
+import androidx.annotation.*
+import androidx.annotation.IntRange
 
 interface SurfaceTextureProvider : AutoCloseable {
 
@@ -17,10 +16,17 @@ interface SurfaceTextureProvider : AutoCloseable {
 
     val surface: Surface
 
-    val size: Size
+    @get:IntRange(from = 1)
+    val width: Int
+
+    @get:IntRange(from = 1)
+    val height: Int
 
     @MainThread
     fun setOnFrameAvailableListener(listener: OnFrameAvailableListener?, handler: Handler?)
+
+    @WorkerThread
+    fun getTransformMatrix(@Size(value = 16) mtx: FloatArray)
 
     @WorkerThread
     fun attachToGLContext(texName: Int)
